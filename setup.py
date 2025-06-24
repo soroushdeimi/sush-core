@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Setup script for SpectralFlow
+Setup script for Sush Core
 """
 
 from setuptools import setup, find_packages
@@ -12,10 +12,10 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 
 setup(
-    name="spectralflow",
+    name="sush-core",
     version="1.0.0",
-    author="SpectralFlow Development Team",
-    description="Quantum-resistant censorship circumvention system",
+    author="Sush Core Development Team",
+    description="Advanced censorship circumvention system",
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=find_packages(),
@@ -34,19 +34,17 @@ setup(
         "Topic :: System :: Networking",
     ],
     python_requires=">=3.9",
-    install_requires=requirements,
-    entry_points={
+    install_requires=requirements,    entry_points={
         "console_scripts": [
-            "spectralflow=spectralflow_cli:main",
+            "sush=sush_cli:main",
         ],
     },
     include_package_data=True,
     package_data={
         "spectralflow": ["config/*.conf"],
-    },
-    project_urls={
-        "Bug Reports": "https://github.com/yourusername/spectralflow/issues",
-        "Source": "https://github.com/yourusername/spectralflow",
-        "Documentation": "https://github.com/yourusername/spectralflow/blob/main/docs/",
+    },    project_urls={
+        "Bug Reports": "https://github.com/soroushdeimi/sush-core/issues",
+        "Source": "https://github.com/soroushdeimi/sush-core",
+        "Documentation": "https://github.com/soroushdeimi/sush-core/blob/main/docs/",
     },
 )

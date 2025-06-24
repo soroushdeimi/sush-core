@@ -1,8 +1,8 @@
-# SpectralFlow
+# Sush Core
 
 *Next-gen proxy that adapts to bypass censorship*
 
-SpectralFlow is a censorship circumvention tool built for hostile network environments. It combines quantum-safe crypto with adaptive protocols to stay ahead of detection systems.
+Sush Core is a censorship circumvention tool built for hostile network environments. It combines quantum-safe crypto with adaptive protocols to stay ahead of detection systems.
 
 ## What's Inside
 
@@ -18,8 +18,8 @@ SpectralFlow is a censorship circumvention tool built for hostile network enviro
 ### Setup
 
 ```bash
-git clone https://github.com/yourusername/spectralflow.git
-cd spectralflow
+git clone https://github.com/soroushdeimi/sush-core.git
+cd sush-core
 pip install -r requirements.txt
 ```
 
@@ -27,7 +27,7 @@ pip install -r requirements.txt
 
 ```bash
 # Start the client proxy
-python spectralflow_cli.py client --config config/client.conf
+python sush_cli.py client --config config/client.conf
 
 # Point your browser to localhost:8080 (SOCKS5)
 ```
@@ -40,17 +40,17 @@ cp config/server.conf.example config/server.conf
 vim config/server.conf  # Add your server details
 
 # Start serving
-python spectralflow_cli.py server --config config/server.conf
+python sush_cli.py server --config config/server.conf
 ```
 
 ## Configuration
 
 ### Environment Variables
 ```bash
-export SPECTRALFLOW_SERVER_HOST=your-server.com
-export SPECTRALFLOW_SERVER_PORT=9090
-export SPECTRALFLOW_THREAT_LEVEL=high  # low, medium, high, paranoid
-export SPECTRALFLOW_ML_ENABLE=true
+export SUSH_SERVER_HOST=your-server.com
+export SUSH_SERVER_PORT=9090
+export SUSH_THREAT_LEVEL=high  # low, medium, high, paranoid
+export SUSH_ML_ENABLE=true
 ```
 
 ### Config Files
@@ -61,7 +61,7 @@ Check [USER_GUIDE.md](USER_GUIDE.md) for detailed configuration options.
 
 ## How It Works
 
-SpectralFlow has four main layers:
+Sush Core has four main layers:
 
 - **Core**: Quantum crypto, adaptive encryption, traffic morphing
 - **Transport**: Protocol switching, steganographic hiding
@@ -84,9 +84,9 @@ python tests/test_core_components.py
 
 Found a bug? Want to add a feature? Here's how:
 
-- File issues on [GitHub Issues](https://github.com/yourusername/spectralflow/issues)
+- File issues on [GitHub Issues](https://github.com/soroushdeimi/sush-core/issues)
 - Submit pull requests for features
-- Join discussions in [GitHub Discussions](https://github.com/yourusername/spectralflow/discussions)
+- Join discussions in [GitHub Discussions](https://github.com/soroushdeimi/sush-core/discussions)
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for coding guidelines.
 

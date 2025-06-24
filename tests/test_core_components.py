@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Quick validation test for SpectralFlow components.
+Quick validation test for Sush Core components.
 Simple tests to verify basic functionality.
 """
 
@@ -184,7 +184,7 @@ def test_condition_evaluation():
 
 async def main():
     """Run all quick validation tests."""
-    print("SpectralFlow Phase 4 Quick Validation")
+    print("Sush Core Phase 4 Quick Validation")
     print("=" * 40)
     
     tests = [

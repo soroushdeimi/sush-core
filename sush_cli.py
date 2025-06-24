@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-SpectralFlow Command Line Interface
+Sush Core Command Line Interface
 
-Simple CLI for running SpectralFlow client operations.
+Simple CLI for running Sush Core client operations.
 """
 
 import asyncio
@@ -19,12 +19,12 @@ async def run_client_interactive():
     config = ClientConfig(log_level="INFO")
     
     async with SpectralFlowClient(config) as client:
-        print(f"SpectralFlow Client Started (Node ID: {client.config.node_id})")
+        print(f"Sush Core Client Started (Node ID: {client.config.node_id})")
         print("Type 'help' for available commands")
         
         while True:
             try:
-                command = input("spectral> ").strip()
+                command = input("sush> ").strip()
                 
                 if not command:
                     continue
@@ -157,14 +157,13 @@ async def adapt_command(client, strategy):
 async def run_proxy_mode(local_port, remote_host, remote_port):
     """Run client in proxy mode."""
     config = ClientConfig(log_level="WARNING")
-    
-    async with SpectralFlowClient(config) as client:
-        print(f"SpectralFlow Proxy: localhost:{local_port} -> {remote_host}:{remote_port}")
+      async with SpectralFlowClient(config) as client:
+        print(f"Sush Core Proxy: localhost:{local_port} -> {remote_host}:{remote_port}")
         
         async def handle_proxy_connection(reader, writer):
             """Handle incoming proxy connection."""
             try:
-                # Connect through SpectralFlow
+                # Connect through Sush Core
                 connection_id = await client.connect(remote_host, remote_port, "tcp")
                 
                 # Relay data bidirectionally
@@ -214,7 +213,7 @@ async def run_proxy_mode(local_port, remote_host, remote_port):
 
 def main():
     """Main CLI function."""
-    parser = argparse.ArgumentParser(description="SpectralFlow CLI")
+    parser = argparse.ArgumentParser(description="Sush Core CLI")
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
     # Interactive mode

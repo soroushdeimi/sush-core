@@ -1,10 +1,10 @@
-# SpectralFlow User Guide
+# Sush Core User Guide
 
-*How to set up and use SpectralFlow for private internet access*
+*How to set up and use Sush Core for private internet access*
 
 ## What's This Thing?
 
-SpectralFlow is a proxy that helps you browse privately, especially if your internet is censored or monitored. Think of it as a smart tunnel that disguises your traffic and routes it through multiple servers.
+Sush Core is a proxy that helps you browse privately, especially if your internet is censored or monitored. Think of it as a smart tunnel that disguises your traffic and routes it through multiple servers.
 
 ## Getting It Running
 
@@ -12,10 +12,10 @@ SpectralFlow is a proxy that helps you browse privately, especially if your inte
 1. Grab Python 3.9+ from [python.org](https://python.org)
 2. When installing, check "Add Python to PATH"
 
-### Get SpectralFlow
+### Get Sush Core
 ```bash
-git clone https://github.com/yourusername/spectralflow.git
-cd spectralflow
+git clone https://github.com/soroushdeimi/sush-core.git
+cd sush-core
 ```
 
 ### Install the Stuff It Needs
@@ -39,7 +39,7 @@ pip install -r requirements.txt
 
 3. **Start the proxy:**
    ```bash
-   python spectralflow_cli.py client
+   python sush_cli.py client
    ```
 
 4. **Set up your browser:**
@@ -47,7 +47,7 @@ pip install -r requirements.txt
    - Set SOCKS5 proxy to `127.0.0.1:8080`
    - Done
 
-Your traffic now goes through SpectralFlow.
+Your traffic now goes through Sush Core.
 
 ## Browser Configuration
 
@@ -88,9 +88,9 @@ enable_ml = true
 Set these instead of using config files:
 
 ```cmd
-set SPECTRALFLOW_SERVER_HOST=your-server.example.com
-set SPECTRALFLOW_SERVER_PORT=9090
-set SPECTRALFLOW_THREAT_LEVEL=high
+set SUSH_SERVER_HOST=your-server.example.com
+set SUSH_SERVER_PORT=9090
+set SUSH_THREAT_LEVEL=high
 ```
 
 ## Troubleshooting
@@ -106,7 +106,7 @@ pip install kyber-py
 - Check your internet connection
 
 ### Browser can't connect
-- Make sure SpectralFlow client is running
+- Make sure Sush Core client is running
 - Check proxy settings in browser
 - Try restarting the client
 
@@ -127,13 +127,13 @@ pip install kyber-py
 
 ```bash
 # Start with custom config
-python spectralflow_cli.py client --config my-config.conf
+python sush_cli.py client --config my-config.conf
 
 # Start with high security
-python spectralflow_cli.py client --threat-level critical
+python sush_cli.py client --threat-level critical
 
 # Start on different port
-python spectralflow_cli.py client --port 9050
+python sush_cli.py client --port 9050
 ```
 
 ### Multiple Configurations
@@ -146,7 +146,7 @@ You can have different configs for different situations:
 
 Switch between them:
 ```bash
-python spectralflow_cli.py client --config config\travel.conf
+python sush_cli.py client --config config\travel.conf
 ```
 
 ## Getting Help
@@ -157,7 +157,7 @@ python spectralflow_cli.py client --config config\travel.conf
 
 ## Safety and Legal Notice
 
-- SpectralFlow is for legitimate privacy protection
+- Sush Core is for legitimate privacy protection
 - Respect local laws and regulations
 - Don't use for illegal activities
 - Use responsibly and ethically

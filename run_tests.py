@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SpectralFlow Test Suite Runner - Production readiness validation."""
+"""Sush Core Test Suite Runner - Production readiness validation."""
 
 import os
 import sys
@@ -35,7 +35,7 @@ def run_command(cmd: list, description: str) -> bool:
 
 def main():
     """Run the complete test suite."""
-    print("SpectralFlow Production Test Suite")
+    print("Sush Core Production Test Suite")
     print("=" * 50)
     
     # Change to project directory

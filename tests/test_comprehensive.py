@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""
-Simple Phase 4 Validation Tests - Clean version without emojis
-
-Comprehensive validation of SpectralFlow security hardening and enhancements.
-"""
 
 import asyncio
 import logging

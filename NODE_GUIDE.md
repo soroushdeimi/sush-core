@@ -1,10 +1,10 @@
-# SpectralFlow Node Guide
+# Sush Core Node Guide
 
 *How to run a server node and help the network*
 
 ## Should You Run a Node?
 
-Running a SpectralFlow node helps people get around censorship. But there are things to consider:
+Running a Sush Core node helps people get around censorship. But there are things to consider:
 
 ### Legal Stuff (Important!)
 - **Check your laws** - proxy services aren't legal everywhere
@@ -62,18 +62,18 @@ sudo yum install python3 python3-pip git
 # Download Git from git-scm.com
 ```
 
-### 2. Download and Install SpectralFlow
+### 2. Download and Install Sush Core
 
 ```bash
-git clone https://github.com/yourusername/spectralflow.git
-cd spectralflow
+git clone https://github.com/soroushdeimi/sush-core.git
+cd sush-core
 pip3 install -r requirements.txt
 ```
 
 ### 3. Generate Node Identity
 
 ```bash
-python spectralflow_cli.py generate-keys --output config/node-keys.json
+python sush_cli.py generate-keys --output config/node-keys.json
 ```
 
 ## Configuration
@@ -101,7 +101,7 @@ rate_limit = 100
 
 [logging]
 level = INFO
-file = logs/spectralflow-server.log
+file = logs/sush-core-server.log
 ```
 
 ### Bridge Node Setup
@@ -146,7 +146,7 @@ abuse_url = https://yourdomain.com/abuse
 
 ### Linux (iptables)
 ```bash
-# Allow SpectralFlow port
+# Allow Sush Core port
 sudo iptables -A INPUT -p tcp --dport 9090 -j ACCEPT
 
 # For exit nodes, allow outbound traffic
@@ -156,29 +156,29 @@ sudo iptables -A OUTPUT -j ACCEPT
 ### Windows Firewall
 ```powershell
 # Allow inbound on port 9090
-New-NetFirewallRule -DisplayName "SpectralFlow" -Direction Inbound -Port 9090 -Protocol TCP -Action Allow
+New-NetFirewallRule -DisplayName "Sush Core" -Direction Inbound -Port 9090 -Protocol TCP -Action Allow
 ```
 
 ## Running the Server
 
 ### Development/Testing
 ```bash
-python spectralflow_cli.py server --config config/server.conf
+python sush_cli.py server --config config/server.conf
 ```
 
 ### Production (Linux systemd)
 
-1. **Create service file** (`/etc/systemd/system/spectralflow.service`):
+1. **Create service file** (`/etc/systemd/system/sush-core.service`):
 ```ini
 [Unit]
-Description=SpectralFlow Server
+Description=Sush Core Server
 After=network.target
 
 [Service]
 Type=simple
-User=spectralflow
-WorkingDirectory=/opt/spectralflow
-ExecStart=/usr/bin/python3 spectralflow_cli.py server --config config/server.conf
+User=sushcore
+WorkingDirectory=/opt/sush-core
+ExecStart=/usr/bin/python3 sush_cli.py server --config config/server.conf
 Restart=on-failure
 RestartSec=10
 
@@ -188,32 +188,32 @@ WantedBy=multi-user.target
 
 2. **Enable and start**:
 ```bash
-sudo systemctl enable spectralflow
-sudo systemctl start spectralflow
-sudo systemctl status spectralflow
+sudo systemctl enable sush-core
+sudo systemctl start sush-core
+sudo systemctl status sush-core
 ```
 
 ### Production (Windows Service)
 
 Use NSSM (Non-Sucking Service Manager):
 ```cmd
-nssm install SpectralFlow
-nssm set SpectralFlow Application C:\Python39\python.exe
-nssm set SpectralFlow AppParameters "spectralflow_cli.py server --config config\server.conf"
-nssm set SpectralFlow AppDirectory C:\SpectralFlow
-nssm start SpectralFlow
+nssm install SushCore
+nssm set SushCore Application C:\Python39\python.exe
+nssm set SushCore AppParameters "sush_cli.py server --config config\server.conf"
+nssm set SushCore AppDirectory C:\SushCore
+nssm start SushCore
 ```
 
 ## Monitoring and Maintenance
 
 ### Check Server Status
 ```bash
-python spectralflow_cli.py status --config config/server.conf
+python sush_cli.py status --config config/server.conf
 ```
 
 ### View Logs
 ```bash
-tail -f logs/spectralflow-server.log
+tail -f logs/sush-core-server.log
 ```
 
 ### Monitor Resources
@@ -228,17 +228,17 @@ netstat -tulpn | grep 9090
 df -h
 ```
 
-### Update SpectralFlow
+### Update Sush Core
 ```bash
 git pull origin main
 pip3 install -r requirements.txt --upgrade
-sudo systemctl restart spectralflow
+sudo systemctl restart sush-core
 ```
 
 ## Security Best Practices
 
 ### Server Hardening
-- **Use dedicated user account** for SpectralFlow
+- **Use dedicated user account** for Sush Core
 - **Keep system updated** with security patches  
 - **Use strong passwords** and key-based SSH
 - **Enable fail2ban** to prevent brute force attacks
@@ -314,6 +314,6 @@ sudo kill -9 <PID>
 
 ---
 
-**Running a SpectralFlow node helps protect digital rights worldwide. Thank you for your contribution to internet freedom!**
+**Running a Sush Core node helps protect digital rights worldwide. Thank you for your contribution to internet freedom!**
 
 *Questions? Join our node operator community or open an issue on GitHub.*

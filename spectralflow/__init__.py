@@ -1,7 +1,7 @@
-"""SpectralFlow: Quantum-resistant censorship circumvention protocol."""
+"""Sush Core: Quantum-resistant censorship circumvention protocol."""
 
 __version__ = "1.0.0"
-__author__ = "SpectralFlow Team"
+__author__ = "Sush Core Team"
 __description__ = "Quantum-resistant censorship circumvention protocol"
 
 from .core import *
