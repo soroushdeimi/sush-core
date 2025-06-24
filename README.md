@@ -88,12 +88,6 @@ Found a bug? Want to add a feature? Here's how:
 - Submit pull requests for features
 - Join discussions in [GitHub Discussions](https://github.com/soroushdeimi/sush-core/discussions)
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for coding guidelines.
-
-## Security
-
-Found a vulnerability? Check [SECURITY.md](SECURITY.md) for responsible disclosure.
-
 ## What's Next
 
 - Bridge discovery protocol
