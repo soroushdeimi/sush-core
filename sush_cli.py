@@ -157,7 +157,7 @@ async def adapt_command(client, strategy):
 async def run_proxy_mode(local_port, remote_host, remote_port):
     """Run client in proxy mode."""
     config = ClientConfig(log_level="WARNING")
-      async with SpectralFlowClient(config) as client:
+    async with SpectralFlowClient(config) as client:
         print(f"Sush Core Proxy: localhost:{local_port} -> {remote_host}:{remote_port}")
         
         async def handle_proxy_connection(reader, writer):
