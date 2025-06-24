@@ -99,11 +99,3 @@ Found a bug? Want to add a feature? Here's how:
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
-
-## Legal Notice
-
-This is research software for legitimate privacy protection. You're responsible for following your local laws.
-
----
-
-*Fighting censorship, one packet at a time*
