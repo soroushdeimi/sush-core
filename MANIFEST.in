@@ -1,0 +1,15 @@
+include README.md
+include LICENSE
+include requirements.txt
+include CHANGELOG.md
+include SECURITY.md
+include CONTRIBUTING.md
+recursive-include config *.conf *.example
+recursive-include docs *.md *.rst
+recursive-include examples *.py
+recursive-include models *.pkl
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude .DS_Store
+global-exclude *.so
+global-exclude .git*
