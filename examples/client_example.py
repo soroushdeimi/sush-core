@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SpectralFlow Client Example
+Sushcore Client Example
 
 Demonstrates how to use the SpectralFlow client for censorship circumvention.
 """
