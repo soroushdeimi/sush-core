@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SpectralFlow Server Example
+Sushcore Server Example
 
 Demonstrates how to run a SpectralFlow server/mirror node.
 """
