@@ -95,7 +95,12 @@ Found a bug? Want to add a feature? Here's how:
 - Browser extension (WebAssembly)
 - Better ML models
 - Performance improvements
+  
+## Legal Notice
 
+This is research software for legitimate privacy protection. You're responsible for following your local laws.
+
+---
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
