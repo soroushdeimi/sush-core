@@ -1,10 +1,10 @@
-# SpectralFlow Architecture
+# sushCore Architecture
 
 *How the layers work together to beat censorship*
 
 ## The Big Picture
 
-SpectralFlow has four layers that each solve different problems:
+sush has four layers that each solve different problems:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -39,7 +39,7 @@ SpectralFlow has four layers that each solve different problems:
 
 ## Core Layer - The Crypto Foundation
 
-### Quantum Obfuscator (`spectralflow.core.quantum_obfuscator`)
+### Quantum Obfuscator (`sush.core.quantum_obfuscator`)
 
 This is where the serious crypto happens. Uses ML-KEM (Kyber) because RSA and ECDH will break when quantum computers get good enough.
 
@@ -51,7 +51,7 @@ This is where the serious crypto happens. Uses ML-KEM (Kyber) because RSA and EC
 **Why quantum-safe matters:**
 Current crypto (RSA, ECDH) will be broken by quantum computers in ~10-15 years. ML-KEM is designed to survive that.
 
-### Adaptive Cipher Suite (`spectralflow.core.adaptive_cipher`)
+### Adaptive Cipher Suite (`sush.core.adaptive_cipher`)
 
 Picks the best encryption based on current conditions.
 
@@ -70,7 +70,7 @@ else:
     use_chacha20()  # Best compatibility
 ```
 
-### Traffic Morphing Engine (`spectralflow.core.traffic_morphing`)
+### Traffic Morphing Engine (`sush.core.traffic_morphing`)
 
 Makes your traffic look normal to DPI systems.
 
@@ -79,7 +79,7 @@ Makes your traffic look normal to DPI systems.
 - **Timing jitter**: Breaks timing analysis
 - **Protocol mimicry**: Looks like HTTPS/HTTP2
 
-### Protocol Hopper (`spectralflow.transport.protocol_hopper`)
+### Protocol Hopper (`sush.transport.protocol_hopper`)
 
 Dynamic switching between transport protocols to evade protocol-specific blocking.
 
@@ -99,7 +99,7 @@ class HoppingStrategy:
         return optimal_protocol
 ```
 
-### Steganographic Channels (`spectralflow.transport.steganographic_channels`)
+### Steganographic Channels (`sush.transport.steganographic_channels`)
 
 Covert communication channels hidden within legitimate network protocols.
 
@@ -122,7 +122,7 @@ Covert communication channels hidden within legitimate network protocols.
 
 ## Network Layer
 
-### MirrorNet Onion Routing (`spectralflow.network.onion_routing`)
+### MirrorNet Onion Routing (`sush.network.onion_routing`)
 
 Multi-hop routing through a distributed network of mirror nodes with layered encryption.
 
@@ -137,7 +137,7 @@ Multi-hop routing through a distributed network of mirror nodes with layered enc
 - **Traffic Analysis Resistance**: Constant packet sizes and timing
 - **Node Compromise Resilience**: No single node can compromise entire path
 
-### Distributed Node Integrity System (DNIS) (`spectralflow.network.node_integrity`)
+### Distributed Node Integrity System (DNIS) (`sush.network.node_integrity`)
 
 Cryptographic verification of node authenticity and behavior monitoring.
 
@@ -158,7 +158,7 @@ class NodeTrust:
 
 ## Control Layer
 
-### Adaptive Control Loop (`spectralflow.control.adaptive_control`)
+### Adaptive Control Loop (`sush.control.adaptive_control`)
 
 Intelligent system adaptation based on real-time network conditions and threat assessment.
 
@@ -178,7 +178,7 @@ Intelligent system adaptation based on real-time network conditions and threat a
 
 3. **ML Integration**: Machine learning-enhanced decision making
 
-### Censorship Detector (`spectralflow.control.censorship_detector`)
+### Censorship Detector (`sush.control.censorship_detector`)
 
 ML-powered system for real-time censorship detection and classification.
 
