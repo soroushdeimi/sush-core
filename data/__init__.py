@@ -1,1 +1,1 @@
-# Data module for SpectralFlow training datasets
+# Data module for sushcore training datasets
