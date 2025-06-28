@@ -27,7 +27,7 @@ pip install -r requirements.txt
 
 ```bash
 # Start the client proxy
-python sush_cli.py client --config config/client.conf
+python sush_cli.py proxy 8080 <server_host> 9090
 
 # Point your browser to localhost:8080 (SOCKS5)
 ```
@@ -104,3 +104,4 @@ This is research software for legitimate privacy protection. You're responsible 
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
+

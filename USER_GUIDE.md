@@ -39,7 +39,7 @@ pip install -r requirements.txt
 
 3. **Start the proxy:**
    ```bash
-   python sush_cli.py client
+   python sush_cli.py proxy 8080 <server_host> 9090
    ```
 
 4. **Set up your browser:**
@@ -127,13 +127,13 @@ pip install kyber-py
 
 ```bash
 # Start with custom config
-python sush_cli.py client --config my-config.conf
+python sush_cli.py interactive --log-level INFO
 
 # Start with high security
-python sush_cli.py client --threat-level critical
+python sush_cli.py interactive --log-level DEBUG
 
-# Start on different port
-python sush_cli.py client --port 9050
+# Start on different port (proxy mode)
+python sush_cli.py proxy 9050 <server_host> 9090
 ```
 
 ### Multiple Configurations
@@ -146,7 +146,7 @@ You can have different configs for different situations:
 
 Switch between them:
 ```bash
-python sush_cli.py client --config config\travel.conf
+python sush_cli.py proxy 8080 <server_host> 9090
 ```
 
 ## Getting Help
