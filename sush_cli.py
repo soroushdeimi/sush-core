@@ -9,14 +9,13 @@ import asyncio
 import argparse
 import sys
 import logging
-from pathlib import Path
 
 from spectralflow.client import SpectralFlowClient, ClientConfig
 
 
-async def run_client_interactive():
+async def run_client_interactive(log_level="INFO"):
     """Run client in interactive mode."""
-    config = ClientConfig(log_level="INFO")
+    config = ClientConfig(log_level=log_level)
     
     async with SpectralFlowClient(config) as client:
         print(f"Sush Core Client Started (Node ID: {client.config.node_id})")
@@ -218,6 +217,9 @@ def main():
     
     # Interactive mode
     interactive_parser = subparsers.add_parser('interactive', help='Run in interactive mode')
+    interactive_parser.add_argument('--log-level', default='INFO', 
+                                   choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+                                   help='Logging level (default: INFO)')
     
     # Proxy mode
     proxy_parser = subparsers.add_parser('proxy', help='Run as SOCKS proxy')
@@ -233,9 +235,10 @@ def main():
     
     args = parser.parse_args()
     
+    # Default to interactive mode if no command specified
     if not args.command:
-        parser.print_help()
-        return
+        args.command = 'interactive'
+        args.log_level = 'INFO'
     
     # Setup logging
     logging.basicConfig(
@@ -245,7 +248,7 @@ def main():
     
     try:
         if args.command == 'interactive':
-            asyncio.run(run_client_interactive())
+            asyncio.run(run_client_interactive(args.log_level))
         elif args.command == 'proxy':
             asyncio.run(run_proxy_mode(args.local_port, args.remote_host, args.remote_port))
         elif args.command == 'connect':

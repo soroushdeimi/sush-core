@@ -81,11 +81,11 @@ async def run_bridge_relay():
         
         # Display bridge information
         node_info = server.get_node_info()
-        print(f"Bridge Relay started!")
+        print("Bridge Relay started!")
         print(f"Node ID: {node_info['node_id']}")
         print(f"Listening on: {node_info['address']}:{node_info['ports']}")
         print(f"Capabilities: {node_info['capabilities']}")
-        print(f"Bridge line for clients:")
+        print("Bridge line for clients:")
         print(f"Bridge {node_info['address']}:{node_info['ports'][0]} {node_info['node_id']}")
         
         # Keep running

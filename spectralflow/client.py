@@ -1,15 +1,13 @@
 """SpectralFlow client implementation."""
 
-import asyncio
 import logging
 import time
-import json
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass
 import secrets
 
 from .core.quantum_obfuscator import QuantumObfuscator
-from .transport.adaptive_transport import AdaptiveTransport
+from .transport.adaptive_transport import AdaptiveTransport, TransportConfig, TransportMode
 from .network.mirror_network import MirrorNetwork
 from .control.adaptive_control import AdaptiveControlLoop
 from .control.censorship_detector import CensorshipDetector
@@ -87,13 +85,15 @@ class SpectralFlowClient:
         self.logger = logging.getLogger(__name__)
         
         # Component initialization
-        self.quantum_obfuscator = QuantumObfuscator(
-            obfuscation_level=self.config.obfuscation_level
-        )
+        self.quantum_obfuscator = QuantumObfuscator()
+        self.quantum_obfuscator.set_obfuscation_level(self._get_obfuscation_level_name())
         
         self.adaptive_transport = AdaptiveTransport(
-            protocols=self.config.preferred_protocols,
-            ports=self.config.preferred_ports
+            config=TransportConfig(
+                mode=TransportMode.DIRECT,
+                enable_hopping=True,
+                hop_interval=30.0
+            )
         )
         
         self.mirror_network = MirrorNetwork(
@@ -184,7 +184,6 @@ class SpectralFlowClient:
     
     async def _initialize_components(self):
         """Initialize all components."""
-        # Initialize adaptive control with component references
         await self.adaptive_control.initialize_components(
             censorship_detector=self.censorship_detector,
             threat_monitor=self.threat_monitor,
@@ -193,13 +192,6 @@ class SpectralFlowClient:
             adaptive_transport=self.adaptive_transport,
             mirror_network=self.mirror_network
         )
-        
-        # Configure transport layer
-        await self.adaptive_transport.configure({
-            'enable_steganography': self.config.enable_steganography,
-            'enable_traffic_morphing': self.config.enable_traffic_morphing,
-            'connection_timeout': self.config.connection_timeout
-        })
         
         # Configure mirror network
         await self.mirror_network.configure({
@@ -379,8 +371,10 @@ class SpectralFlowClient:
             connection_info = self.active_connections[connection_id]
             connection = connection_info['connection']
             
-            # Close the connection
-            await connection.close()
+            # Check if connection object exists before trying to close it
+            if connection is not None:
+                # Close the connection
+                await connection.close()
             
             # Remove from active connections
             del self.active_connections[connection_id]
@@ -390,6 +384,9 @@ class SpectralFlowClient:
             
         except Exception as e:
             self.logger.error(f"Failed to close connection {connection_id}: {e}")
+            # Still remove from active connections even if close failed
+            if connection_id in self.active_connections:
+                del self.active_connections[connection_id]
             return False
     
     def set_connection_callback(self, event: str, callback: Callable):
@@ -411,7 +408,7 @@ class SpectralFlowClient:
             'active_connections': len(self.active_connections),
             'system_status': self.adaptive_control.get_system_status(),
             'network_status': self.mirror_network.get_network_status(),
-            'transport_status': self.adaptive_transport.get_status(),
+            'transport_status': self.adaptive_transport.get_statistics(),
             'security_status': {
                 'obfuscation_level': self.quantum_obfuscator.current_obfuscation_level,
                 'current_threat_level': self.censorship_detector.current_threat_level.name,
@@ -463,6 +460,17 @@ class SpectralFlowClient:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit."""
         await self.stop()
+
+    def _get_obfuscation_level_name(self) -> str:
+        """Convert numeric obfuscation level to string name."""
+        if self.config.obfuscation_level <= 0.25:
+            return "low"
+        elif self.config.obfuscation_level <= 0.5:
+            return "medium"
+        elif self.config.obfuscation_level <= 0.75:
+            return "high"
+        else:
+            return "extreme"
 
 
 # Convenience functions for quick usage

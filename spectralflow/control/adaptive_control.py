@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field, asdict
 from enum import Enum, auto
 import statistics
@@ -423,17 +423,12 @@ class AdaptiveControlLoop:
     
     async def start(self):
         """Start the adaptive control loop."""
-        if self.is_running:
-            self.logger.warning("Control loop already running")
-            return
-        
         self.is_running = True
         self.system_state = SystemState.NORMAL
+        self.logger.info("Starting adaptive control loop")
         
-        # Start main control loop
+        # Start the main control loop in background
         self.control_task = asyncio.create_task(self._control_loop())
-        
-        self.logger.info("Adaptive control loop started")
     
     async def stop(self):
         """Stop the adaptive control loop."""

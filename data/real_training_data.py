@@ -6,7 +6,7 @@ Contains actual network censorship patterns and normal traffic signatures.
 
 import json
 import numpy as np
-from typing import List, Dict, Tuple
+from typing import List, Tuple
 
 
 class RealTrainingDataProvider:

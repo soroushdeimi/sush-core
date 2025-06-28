@@ -7,11 +7,10 @@ import json
 from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass
 import secrets
-import socket
 
 from .core.quantum_obfuscator import QuantumObfuscator
 from .transport.adaptive_transport import AdaptiveTransport
-from .network.mirror_network import MirrorNetwork
+from .network.mirror_network import MirrorNetworkCoordinator
 from .network.onion_routing import OnionRoutingProtocol
 from .network.node_integrity import SimplifiedNodeIntegrity
 from .control.adaptive_control import AdaptiveControlLoop

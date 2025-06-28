@@ -14,7 +14,6 @@ import logging
 
 # Import libraries for QUIC and WebSocket support
 try:
-    import aioquic
     from aioquic.asyncio import connect as quic_connect
     from aioquic.quic.configuration import QuicConfiguration
     QUIC_AVAILABLE = True

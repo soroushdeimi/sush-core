@@ -4,11 +4,11 @@ Adaptive Transport - Coordinate transport layer components
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, Optional, Any
 from enum import Enum, auto
 from dataclasses import dataclass
 
-from .protocol_hopper import ProtocolHopper, TransportProtocol
+from .protocol_hopper import ProtocolHopper
 from .steganographic_channels import ChannelManager
 from .metadata_channels import MetadataChannels
 
@@ -278,4 +278,15 @@ class AdaptiveTransport:
                 'steganographic': self.stego_channels.get_channel_info(),
                 'metadata': self.metadata_channels.get_channel_info()
             }
+        }
+
+    async def get_performance_metrics(self) -> dict:
+        """Return basic transport performance metrics (stub)."""
+        return {
+            'packets_sent': self.transport_stats.get('packets_sent', 0),
+            'packets_received': self.transport_stats.get('packets_received', 0),
+            'hops_completed': self.transport_stats.get('hops_completed', 0),
+            'steganographic_bytes': self.transport_stats.get('steganographic_bytes', 0),
+            'active_connections': len(self.active_connections),
+            'mode': self.config.mode.name if hasattr(self.config, 'mode') else 'unknown'
         }

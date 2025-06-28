@@ -5,7 +5,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 try:
-    from kyber_py.kyber768 import Kyber768
+    from kyber_py import Kyber768
 except ImportError:
     # Fallback for different package structure
     try:

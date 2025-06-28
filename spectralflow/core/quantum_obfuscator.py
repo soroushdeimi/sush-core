@@ -1,6 +1,5 @@
 """Quantum-resistant obfuscation system."""
 
-import asyncio
 import logging
 from typing import Dict, Any, Optional, Tuple, List
 from dataclasses import dataclass
@@ -36,6 +35,12 @@ class QuantumObfuscator:
         
         # Active sessions
         self.sessions: Dict[str, ObfuscationContext] = {}
+        
+        # Obfuscation level tracking
+        self.current_obfuscation_level = "medium"
+        self.default_threat_level = ThreatLevel.MEDIUM
+        
+        # print(f"[DEBUG] QuantumObfuscator.current_obfuscation_level set to {self.current_obfuscation_level}")
         
         self.logger.info("Quantum Obfuscator initialized with ML-KEM-768")
     
@@ -396,5 +401,6 @@ class QuantumObfuscator:
         if level not in level_map:
             raise ValueError(f"Invalid obfuscation level: {level}")
         
+        self.current_obfuscation_level = level
         self.default_threat_level = level_map[level]
         self.logger.info(f"Obfuscation level set to: {level}")

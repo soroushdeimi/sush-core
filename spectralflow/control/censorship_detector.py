@@ -15,7 +15,6 @@ from sklearn.ensemble import IsolationForest
 from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-import joblib
 
 
 class ThreatLevel(Enum):
@@ -122,13 +121,12 @@ class CensorshipDetector:
             self.logger.info("Training ML models for censorship detection...")
             await self.train_ml_models()
         
-        # Start monitoring tasks
-        await asyncio.gather(
-            self._monitor_connections(),
-            self._analyze_patterns(),
-            self._update_baselines(),
-            self._ml_batch_analysis()  # New ML batch analysis task
-        )
+        # Start monitoring tasks in background (don't wait for them)
+        asyncio.create_task(self._monitor_connections())
+        asyncio.create_task(self._analyze_patterns())
+        asyncio.create_task(self._update_baselines())
+        asyncio.create_task(self._ml_batch_analysis())
+    
     async def stop_monitoring(self):
         """Stop censorship monitoring."""
         self.is_monitoring = False

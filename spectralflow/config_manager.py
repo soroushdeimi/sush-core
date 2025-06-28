@@ -68,7 +68,7 @@ class SpectralFlowConfig:
                 missing.append(f"{section_key} ({description})")
         
         if missing:
-            raise ValueError(f"Missing required configuration:\n" + "\n".join(missing))
+            raise ValueError("Missing required configuration:\n" + "\n".join(missing))
 
 
 # Default configurations

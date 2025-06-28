@@ -14,3 +14,6 @@ colorama>=0.4.6
 pyOpenSSL>=23.2.0
 python-dotenv>=1.0.0
 dnspython>=2.3.0
+aioquic>=0.9.21
+websockets>=11.0
+scapy>=2.5.0
