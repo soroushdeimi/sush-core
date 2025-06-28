@@ -5,19 +5,14 @@ Implements a lightweight reputation management system for maintaining node
 reliability in the MirrorNet without complex blockchain operations.
 """
 
-import asyncio
 import logging
 import time
 import hashlib
 import json
-from typing import Dict, List, Optional, Set
-from dataclasses import dataclass, asdict
+from typing import Dict, List, Optional, Set, Any
+from dataclasses import dataclass
 from enum import Enum, auto
-import secrets
-
 from nacl.signing import SigningKey, VerifyKey
-from nacl.exceptions import BadSignatureError
-import nacl.encoding
 
 
 class NodeStatus(Enum):
@@ -65,7 +60,7 @@ class SimplifiedNodeIntegrity:
     
     Maintains node reputation through signed reports without blockchain complexity.
     """
-      def __init__(self, node_id: str, private_key: bytes):
+    def __init__(self, node_id: str, private_key: bytes):
         """
         Initialize simplified DNIS.
         
@@ -85,7 +80,7 @@ class SimplifiedNodeIntegrity:
             try:
                 raw_key = bytes.fromhex(private_key.decode() if isinstance(private_key, bytes) else private_key)
                 self.signing_key = SigningKey(raw_key)
-            except:
+            except Exception :
                 # If not hex, truncate to 32 bytes
                 self.signing_key = SigningKey(private_key[:32])
         else:
@@ -329,7 +324,7 @@ class SimplifiedNodeIntegrity:
             node_record.status = NodeStatus.VERIFIED
         else:
             node_record.status = NodeStatus.UNKNOWN
-      def _sign_data(self, data: str) -> str:
+    def _sign_data(self, data: str) -> str:
         """
         Sign data using Ed25519 digital signature algorithm.
         

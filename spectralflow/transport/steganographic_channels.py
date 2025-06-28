@@ -6,13 +6,13 @@ import struct
 import time
 import socket
 import asyncio
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 from abc import ABC, abstractmethod
-import secrets
+
 
 # Import scapy for raw packet manipulation
 try:
-    from scapy.all import IP, UDP, Raw, sr1, send
+    from scapy.all import IP, UDP, Raw, send
     SCAPY_AVAILABLE = True
 except ImportError:
     SCAPY_AVAILABLE = False

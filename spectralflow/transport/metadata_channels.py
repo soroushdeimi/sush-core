@@ -4,7 +4,7 @@ Metadata Channels - Side channel communication using IP headers
 
 import struct
 import socket
-from typing import Optional, Dict, Any
+from typing import Optional, Dict
 from abc import ABC, abstractmethod
 
 
@@ -131,7 +131,7 @@ class IPIDChannel(MetadataChannel):
                 sock.settimeout(1.0)
                 sock.connect((host, port))
                 sock.close()
-            except:
+            except Exception:
                 pass  # Connection attempt is enough for the demonstration
 
 

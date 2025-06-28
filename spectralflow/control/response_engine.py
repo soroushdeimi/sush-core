@@ -1,12 +1,12 @@
 """Automated response to detected threats."""
 
-import asyncio
 import time
 import random
 from typing import Dict, List, Optional, Callable, Any
 from dataclasses import dataclass
 from enum import Enum, auto
 import logging
+
 
 from .censorship_detector import ThreatEvent, ThreatLevel, CensorshipType
 

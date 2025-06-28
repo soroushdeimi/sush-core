@@ -6,7 +6,7 @@ import asyncio
 import logging
 import time
 import secrets
-from typing import Dict, List, Optional, Any, Tuple, Set
+from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass
 from enum import Enum, auto
 
@@ -153,7 +153,8 @@ class MirrorNetwork:
             self.logger.info("Onion routing protocol initialized")
             
         except Exception as e:
-            self.logger.error(f"Failed to initialize onion routing: {e}")
+            self.logger.warning(f"Onion routing initialization failed: {e}. Circuits will not be available.")
+            self.onion_routing = None
             
     async def _initialize_mirror_node(self):
         """Initialize mirror node if configured."""
@@ -319,7 +320,7 @@ class MirrorNetwork:
     async def establish_circuits(self, count: int = 3) -> int:
         """Establish multiple circuits."""
         if not self.onion_routing:
-            self.logger.error("Cannot establish circuits - onion routing not initialized")
+            self.logger.warning("Cannot establish circuits - onion routing not available")
             return 0
             
         if len(self.known_nodes) < self.config.get('min_circuit_length', 3):
@@ -576,3 +577,13 @@ class MirrorNetwork:
             
         self.status = NetworkStatus.BOOTSTRAPPING
         self.logger.info("MirrorNet shutdown complete")
+
+    async def get_performance_metrics(self) -> dict:
+        """Return basic mirror network performance metrics (stub)."""
+        return {
+            'active_circuits': len(getattr(self, 'active_circuits', {})),
+            'bootstrap_nodes': len(self.config.get('bootstrap_nodes', [])),
+            'node_id': getattr(self, 'node_id', None),
+            'connected': getattr(self, 'running', False),
+            'status': getattr(self, 'status', None).name if getattr(self, 'status', None) else None
+        }

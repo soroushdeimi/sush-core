@@ -4,7 +4,7 @@ import asyncio
 import time
 import socket
 import random
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, field
 from enum import Enum, auto
 import dns.resolver
@@ -99,12 +99,10 @@ class ThreatMonitor:
         # Initialize default probe targets
         await self._initialize_probe_targets()
         
-        # Start monitoring tasks
-        await asyncio.gather(
-            self._continuous_probing(),
-            self._dns_monitoring(),
-            self._infrastructure_detection()
-        )
+        # Start monitoring tasks in background (don't wait for them)
+        asyncio.create_task(self._continuous_probing())
+        asyncio.create_task(self._dns_monitoring())
+        asyncio.create_task(self._infrastructure_detection())
     
     async def stop_monitoring(self):
         """Stop threat monitoring."""

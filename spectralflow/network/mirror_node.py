@@ -1,11 +1,9 @@
 """Mirror nodes acting as covert relay services."""
 
-import asyncio
 import logging
 import time
-import json
 import ssl
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum, auto
 import aiohttp

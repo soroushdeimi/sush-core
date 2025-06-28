@@ -5,40 +5,36 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 try:
-    from kyber_py.kyber768 import Kyber768
+    from kyber_py.kyber import Kyber768
 except ImportError:
-    # Fallback for different package structure
-    try:
-        import kyber_py
-        Kyber768 = kyber_py.Kyber768
-    except (ImportError, AttributeError):        # Mock implementation for testing
-        import secrets
-        import hashlib
+    # Mock implementation for testing
+    import secrets
+    import hashlib
+    
+    class MockKyber768:
+        @staticmethod
+        def keygen():
+            # Mock key generation
+            public_key = secrets.token_bytes(1184)
+            private_key = secrets.token_bytes(2400)
+            return public_key, private_key
         
-        class MockKyber768:
-            @staticmethod
-            def keygen():
-                # Mock key generation
-                public_key = secrets.token_bytes(1184)
-                private_key = secrets.token_bytes(2400)
-                return public_key, private_key
-            
-            @staticmethod
-            def encaps(public_key):
-                # Mock encapsulation
-                shared_secret = hashlib.sha256(public_key[:32]).digest()
-                ciphertext = secrets.token_bytes(1088)
-                ciphertext = shared_secret[:32] + ciphertext[32:]
-                return ciphertext, shared_secret
-            
-            @staticmethod
-            def decaps(ciphertext, private_key):
-                # Mock decapsulation
-                shared_secret = ciphertext[:32]
-                return shared_secret
+        @staticmethod
+        def encaps(public_key):
+            # Mock encapsulation
+            shared_secret = hashlib.sha256(public_key[:32]).digest()
+            ciphertext = secrets.token_bytes(1088)
+            ciphertext = shared_secret[:32] + ciphertext[32:]
+            return ciphertext, shared_secret
         
-        Kyber768 = MockKyber768
-        print("Warning: Using mock ML-KEM implementation. Install proper kyber-py for production use.")
+        @staticmethod
+        def decaps(ciphertext, private_key):
+            # Mock decapsulation
+            shared_secret = ciphertext[:32]
+            return shared_secret
+    
+    Kyber768 = MockKyber768
+    print("Warning: Using mock ML-KEM implementation. Install proper kyber-py for production use.")
 
 
 class MLKEMKeyExchange:
