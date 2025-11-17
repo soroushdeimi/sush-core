@@ -2,20 +2,21 @@
 
 import asyncio
 import contextlib
-import time
 import logging
-from typing import Dict, List, Optional, Tuple, Any
+import statistics
+import time
+from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from enum import Enum, auto
+from typing import Any, Optional
+
 import numpy as np
-from collections import deque, defaultdict
-import statistics
 
 # Machine Learning imports
 from sklearn.ensemble import IsolationForest
+from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 
 
 class ThreatLevel(Enum):
@@ -53,7 +54,7 @@ class ThreatEvent:
     destination_ip: Optional[str] = None
     port: Optional[int] = None
     protocol: Optional[str] = None
-    details: Dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -109,13 +110,13 @@ class CensorshipDetector:
         self.feature_scaler = StandardScaler()
 
         # ML training data
-        self.training_features: List[List[float]] = []
-        self.training_labels: List[int] = []  # 0: normal, 1: censorship
+        self.training_features: list[list[float]] = []
+        self.training_labels: list[int] = []  # 0: normal, 1: censorship
         self.ml_models_trained = False
         self.feature_buffer: deque = deque(maxlen=50)  # For batch ML inference
 
         self.logger = logging.getLogger(__name__)
-        self._tasks: List[asyncio.Task] = []
+        self._tasks: list[asyncio.Task] = []
 
     async def start_monitoring(self):
         """Start continuous censorship monitoring."""
@@ -171,7 +172,7 @@ class CensorshipDetector:
                 f"Threat detected: {threat.threat_type.name} (confidence: {threat.confidence:.2f})"
             )
 
-    def _extract_features(self, metrics: NetworkMetrics) -> List[float]:
+    def _extract_features(self, metrics: NetworkMetrics) -> list[float]:
         """Extract ML features from network metrics."""
         features = [
             metrics.latency,
@@ -218,7 +219,7 @@ class CensorshipDetector:
 
         return features
 
-    async def _ml_threat_detection(self, features: List[float]) -> List[ThreatEvent]:
+    async def _ml_threat_detection(self, features: list[float]) -> list[ThreatEvent]:
         """Use ML models for threat detection."""
         threats = []
 
@@ -265,7 +266,7 @@ class CensorshipDetector:
         return threats
 
     async def train_ml_models(
-        self, normal_data: List[List[float]] = None, threat_data: List[List[float]] = None
+        self, normal_data: list[list[float]] = None, threat_data: list[list[float]] = None
     ):
         """Train ML models with provided or collected data."""
         try:
@@ -309,7 +310,7 @@ class CensorshipDetector:
         except Exception as e:
             self.logger.error(f"Error training ML models: {e}")
 
-    def _generate_training_data(self) -> Tuple[List[List[float]], List[List[float]]]:
+    def _generate_training_data(self) -> tuple[list[list[float]], list[list[float]]]:
         """Generate synthetic training data for ML models."""
         normal_data = []
         threat_data = []
@@ -358,7 +359,7 @@ class CensorshipDetector:
 
         return normal_data, threat_data
 
-    async def _detect_immediate_threats(self, metrics: NetworkMetrics) -> List[ThreatEvent]:
+    async def _detect_immediate_threats(self, metrics: NetworkMetrics) -> list[ThreatEvent]:
         """Detect immediate threats from current metrics."""
         threats = []
 
@@ -595,11 +596,11 @@ class CensorshipDetector:
         max_severity = max(t.severity for t in recent_threats)
         return max_severity
 
-    def get_recent_threats(self, count: int = 10) -> List[ThreatEvent]:
+    def get_recent_threats(self, count: int = 10) -> list[ThreatEvent]:
         """Get the most recent threat events."""
         return list(self.threat_history)[-count:]
 
-    def get_threat_statistics(self) -> Dict[str, Any]:
+    def get_threat_statistics(self) -> dict[str, Any]:
         """Get comprehensive threat statistics."""
         if not self.threat_history:
             return {}

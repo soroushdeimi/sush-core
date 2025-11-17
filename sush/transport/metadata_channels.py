@@ -3,10 +3,10 @@ Metadata Channels - Side channel communication using IP headers
 """
 
 import logging
-import struct
 import socket
-from typing import Optional, Dict
+import struct
 from abc import ABC, abstractmethod
+from typing import Optional
 
 
 class MetadataChannel(ABC):
@@ -129,7 +129,7 @@ class MetadataChannels:
         if channel in self.channels:
             self.active_channel = channel
 
-    def get_channel_info(self) -> Dict[str, Dict]:
+    def get_channel_info(self) -> dict[str, dict]:
         return {
             "ttl": {"capacity": "1 bit/packet", "stealth": "very high"},
             "ip_id": {"capacity": "8 bits/packet", "stealth": "high"},

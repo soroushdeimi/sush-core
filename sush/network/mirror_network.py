@@ -9,7 +9,7 @@ import secrets
 import time
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Optional
 
 from .mirror_node import MirrorConfig, MirrorNode, NodeCredentials, ServiceType
 from .node_integrity import SimplifiedNodeIntegrity
@@ -100,7 +100,7 @@ class MirrorNetwork:
         self.private_key = private_key
         self.logger = logging.getLogger(f"MirrorNetwork-{node_id}")
 
-        self.config: Dict[str, Any] = {
+        self.config: dict[str, Any] = {
             "bootstrap_nodes": [],
             "min_circuit_length": 3,
             "max_circuit_length": 6,
@@ -110,10 +110,10 @@ class MirrorNetwork:
 
         self.status = NetworkStatus.BOOTSTRAPPING
         self.start_time = time.time()
-        self.known_nodes: Dict[str, NodeInfo] = {}
-        self.active_circuits: Dict[str, Any] = {}
-        self.active_connections: Dict[str, MirrorNetworkConnection] = {}
-        self.node_blacklist: Set[str] = set()
+        self.known_nodes: dict[str, NodeInfo] = {}
+        self.active_circuits: dict[str, Any] = {}
+        self.active_connections: dict[str, MirrorNetworkConnection] = {}
+        self.node_blacklist: set[str] = set()
 
         self.mirror_node: Optional[MirrorNode] = None
         self.onion_routing: Optional[OnionRoutingProtocol] = None
@@ -127,9 +127,9 @@ class MirrorNetwork:
         }
 
         self.running = False
-        self._background_tasks: List[asyncio.Task] = []
+        self._background_tasks: list[asyncio.Task] = []
 
-    async def configure(self, config: Dict[str, Any]) -> None:
+    async def configure(self, config: dict[str, Any]) -> None:
         self.config.update(config)
         self.logger.info("Network configuration updated")
 
@@ -376,7 +376,7 @@ class MirrorNetwork:
         self.logger.info(f"Successfully established {successful_circuits}/{count} circuits")
         return successful_circuits
 
-    def _select_circuit_nodes(self) -> List[str]:
+    def _select_circuit_nodes(self) -> list[str]:
         candidates = [
             node
             for node in self.known_nodes.values()
@@ -542,7 +542,7 @@ class MirrorNetwork:
             except Exception as exc:
                 self.logger.warning(f"Error cleaning up circuit {circuit_id}: {exc}")
 
-    def get_network_status(self) -> Dict[str, Any]:
+    def get_network_status(self) -> dict[str, Any]:
         return {
             "node_id": self.node_id,
             "status": self.status.name,
@@ -599,7 +599,7 @@ class MirrorNetwork:
 
     async def _open_transport_connection(
         self, destination: str, port: int, protocol: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[dict[str, Any]]:
         scheme = (protocol or "tcp").lower()
         if scheme not in ("tcp", "udp", "quic", "websocket"):
             self.logger.warning(f"Unsupported protocol '{protocol}', defaulting to TCP")

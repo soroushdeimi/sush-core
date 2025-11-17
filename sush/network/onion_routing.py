@@ -8,7 +8,7 @@ import struct
 import time
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
@@ -55,8 +55,8 @@ class Circuit:
 
     circuit_id: int
     state: CircuitState
-    path: List[str]  # Node IDs in the path
-    layers: List[OnionLayer]
+    path: list[str]  # Node IDs in the path
+    layers: list[OnionLayer]
     created_at: float
     last_activity: float
     purpose: str  # 'general', 'directory', 'introduction', etc.
@@ -78,8 +78,8 @@ class RouteConfig:
 
     max_hops: int = 3
     min_hops: int = 2
-    entry_guards: List[str] = None
-    exit_policies: Dict[str, Any] = None
+    entry_guards: list[str] = None
+    exit_policies: dict[str, Any] = None
     circuit_timeout: int = 600
     max_circuits: int = 100
 
@@ -121,12 +121,12 @@ class OnionRoutingProtocol:
         self.public_key, _ = self.kem.generate_keypair()
 
         # Circuit management
-        self.circuits: Dict[int, Circuit] = {}
+        self.circuits: dict[int, Circuit] = {}
         self.next_circuit_id = 1
         self.circuit_timeout = 600.0  # 10 minutes
 
         # Node directory (simplified)
-        self.known_nodes: Dict[str, Dict[str, Any]] = {}
+        self.known_nodes: dict[str, dict[str, Any]] = {}
 
         # Statistics
         self.stats = {
@@ -138,7 +138,7 @@ class OnionRoutingProtocol:
 
         self.logger.info(f"Onion Routing Protocol initialized for node {node_id}")
 
-    async def create_circuit(self, path: List[str], purpose: str = "general") -> Optional[int]:
+    async def create_circuit(self, path: list[str], purpose: str = "general") -> Optional[int]:
         """
         Create a new onion routing circuit.
 
@@ -563,7 +563,7 @@ class OnionRoutingProtocol:
         self.next_circuit_id += 1
         return circuit_id
 
-    def add_known_node(self, node_id: str, node_info: Dict[str, Any]):
+    def add_known_node(self, node_id: str, node_info: dict[str, Any]):
         """Add a node to the known nodes directory."""
         self.known_nodes[node_id] = {
             "public_key": node_info.get("public_key", ""),
@@ -576,8 +576,8 @@ class OnionRoutingProtocol:
         self.logger.debug(f"Added known node: {node_id}")
 
     def select_circuit_path(
-        self, length: int = 3, exclude_nodes: List[str] = None
-    ) -> Optional[List[str]]:
+        self, length: int = 3, exclude_nodes: list[str] = None
+    ) -> Optional[list[str]]:
         """
         Select nodes for a circuit path.
 
@@ -640,7 +640,7 @@ class OnionRoutingProtocol:
             self.logger.info(f"Cleaning up expired circuit {circuit_id}")
             asyncio.create_task(self.destroy_circuit(circuit_id))
 
-    def get_circuit_info(self, circuit_id: int) -> Optional[Dict[str, Any]]:
+    def get_circuit_info(self, circuit_id: int) -> Optional[dict[str, Any]]:
         """Get information about a circuit."""
         if circuit_id not in self.circuits:
             return None
@@ -658,7 +658,7 @@ class OnionRoutingProtocol:
             "age": time.time() - circuit.created_at,
         }
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get onion routing statistics."""
         active_circuits = len(self.circuits)
 

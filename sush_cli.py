@@ -5,13 +5,12 @@ sushCore Command Line Interface
 Simple CLI for running sushCore client operations.
 """
 
-import asyncio
 import argparse
-import sys
+import asyncio
 import logging
-from pathlib import Path
+import sys
 
-from sush.client import SushClient, ClientConfig
+from sush.client import ClientConfig, SushClient
 
 
 async def run_client_interactive():
@@ -211,7 +210,7 @@ def main():
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # Interactive mode
-    interactive_parser = subparsers.add_parser("interactive", help="Run in interactive mode")
+    subparsers.add_parser("interactive", help="Run in interactive mode")
 
     # Proxy mode
     proxy_parser = subparsers.add_parser("proxy", help="Run as SOCKS proxy")

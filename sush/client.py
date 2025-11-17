@@ -1,18 +1,18 @@
 """SpectralFlow client implementation."""
 
 import logging
-import time
-from typing import Dict, List, Optional, Any, Callable
-from dataclasses import dataclass
 import secrets
+import time
+from dataclasses import dataclass
+from typing import Any, Callable, Optional
 
-from .core.quantum_obfuscator import QuantumObfuscator
-from .transport.adaptive_transport import AdaptiveTransport
-from .network.mirror_network import MirrorNetwork
 from .control.adaptive_control import AdaptiveControlLoop
 from .control.censorship_detector import CensorshipDetector
-from .control.threat_monitor import ThreatMonitor
 from .control.response_engine import ResponseEngine
+from .control.threat_monitor import ThreatMonitor
+from .core.quantum_obfuscator import QuantumObfuscator
+from .network.mirror_network import MirrorNetwork
+from .transport.adaptive_transport import AdaptiveTransport
 
 
 @dataclass
@@ -24,9 +24,9 @@ class ClientConfig:
     private_key: Optional[bytes] = None
 
     # Network configuration
-    bootstrap_nodes: List[str] = None
-    preferred_protocols: List[str] = None
-    preferred_ports: List[int] = None
+    bootstrap_nodes: list[str] = None
+    preferred_protocols: list[str] = None
+    preferred_ports: list[int] = None
 
     # Security settings
     obfuscation_level: float = 0.6
@@ -107,8 +107,8 @@ class SpectralFlowClient:
         # Client state
         self.is_connected = False
         self.is_running = False
-        self.active_connections: Dict[str, Any] = {}
-        self.connection_callbacks: Dict[str, Callable] = {}
+        self.active_connections: dict[str, Any] = {}
+        self.connection_callbacks: dict[str, Callable] = {}
 
         self.logger.info(f"SpectralFlow client initialized with node ID: {self.config.node_id}")
 
@@ -395,7 +395,7 @@ class SpectralFlowClient:
         """
         self.connection_callbacks[event] = callback
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Get comprehensive client status."""
         return {
             "is_running": self.is_running,
@@ -413,7 +413,7 @@ class SpectralFlowClient:
             },
         }
 
-    def get_connection_stats(self, connection_id: str) -> Optional[Dict[str, Any]]:
+    def get_connection_stats(self, connection_id: str) -> Optional[dict[str, Any]]:
         """Get statistics for a specific connection."""
         if connection_id not in self.active_connections:
             return None

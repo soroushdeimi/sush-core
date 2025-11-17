@@ -4,8 +4,8 @@ Smoke test for Sush Core - Basic functionality verification.
 Quick test to ensure core components can be imported and initialized.
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -13,12 +13,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 def test_basic_imports():
     """Test that core modules can be imported."""
     try:
-        from sush.core.quantum_obfuscator import QuantumObfuscator
-        from sush.core.ml_kem import MLKEMKeyExchange
-        from sush.core.adaptive_cipher import AdaptiveCipherSuite
-        from sush.transport.adaptive_transport import AdaptiveTransport
-        from sush.network.mirror_network import MirrorNetwork
         from sush.control.adaptive_control import AdaptiveControlLoop
+        from sush.core.adaptive_cipher import AdaptiveCipherSuite
+        from sush.core.ml_kem import MLKEMKeyExchange
+        from sush.core.quantum_obfuscator import QuantumObfuscator
+        from sush.network.mirror_network import MirrorNetwork
+        from sush.transport.adaptive_transport import AdaptiveTransport
 
         return True
     except ImportError as e:

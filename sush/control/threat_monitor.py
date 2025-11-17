@@ -2,16 +2,17 @@
 
 import asyncio
 import contextlib
-import time
-import socket
+import logging
 import random
-from typing import Dict, List, Optional, Set
+import socket
+import time
+from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from enum import Enum, auto
-import dns.resolver
+from typing import Optional
+
 import dns.exception
-from collections import defaultdict, deque
-import logging
+import dns.resolver
 
 
 class ProbeType(Enum):
@@ -56,7 +57,7 @@ class ProbeResponse:
     timestamp: float
     latency: Optional[float] = None
     error_message: Optional[str] = None
-    details: Dict[str, any] = field(default_factory=dict)
+    details: dict[str, any] = field(default_factory=dict)
 
 
 class ThreatMonitor:
@@ -72,9 +73,9 @@ class ThreatMonitor:
         self.is_monitoring = False
 
         # Probe targets and results
-        self.probe_targets: List[ProbeTarget] = []
+        self.probe_targets: list[ProbeTarget] = []
         self.probe_history: deque = deque(maxlen=1000)
-        self.target_status: Dict[str, ProbeResult] = {}
+        self.target_status: dict[str, ProbeResult] = {}
 
         # DNS monitoring
         self.dns_servers = [
@@ -91,11 +92,11 @@ class ThreatMonitor:
         ]
 
         # Known censorship infrastructure
-        self.known_censors: Set[str] = set()
-        self.suspicious_ips: Set[str] = set()
+        self.known_censors: set[str] = set()
+        self.suspicious_ips: set[str] = set()
 
         self.logger = logging.getLogger(__name__)
-        self._tasks: List[asyncio.Task] = []
+        self._tasks: list[asyncio.Task] = []
 
     async def start_monitoring(self):
         """Start threat monitoring."""
@@ -344,7 +345,7 @@ class ThreatMonitor:
                             )
 
                     # Check for inconsistencies (potential poisoning)
-                    if len(set(str(r) for r in responses.values())) > 1:
+                    if len({str(r) for r in responses.values()}) > 1:
                         self.logger.warning(f"DNS poisoning detected for {domain}: {responses}")
 
                         # Record suspicious IPs
@@ -434,11 +435,11 @@ class ThreatMonitor:
         self.probe_targets.append(target)
         self.logger.info(f"Added probe target: {target.host}:{target.port}")
 
-    def get_target_status(self) -> Dict[str, ProbeResult]:
+    def get_target_status(self) -> dict[str, ProbeResult]:
         """Get current status of all probe targets."""
         return self.target_status.copy()
 
-    def get_probe_statistics(self) -> Dict[str, any]:
+    def get_probe_statistics(self) -> dict[str, any]:
         """Get comprehensive probe statistics."""
         if not self.probe_history:
             return {}

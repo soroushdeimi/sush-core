@@ -203,7 +203,7 @@ class RealTrainingDataProvider:
 
     def load_dataset(self, filename: str) -> tuple[list[list[float]], list[int]]:
         """Load dataset from JSON file."""
-        with open(filename, "r") as f:
+        with open(filename) as f:
             dataset = json.load(f)
 
         return dataset["features"], dataset["labels"]

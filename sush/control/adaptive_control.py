@@ -2,20 +2,20 @@
 
 import asyncio
 import logging
+import statistics
 import time
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, field, asdict
-from enum import Enum, auto
-import statistics
 from collections import deque
+from dataclasses import asdict, dataclass, field
+from enum import Enum, auto
+from typing import Any, Optional
 
-from .censorship_detector import CensorshipDetector, ThreatLevel, CensorshipType
-from .threat_monitor import ThreatMonitor
-from .response_engine import ResponseEngine
 from ..core.quantum_obfuscator import QuantumObfuscator
-from ..transport.adaptive_transport import AdaptiveTransport
 from ..network.mirror_network import MirrorNetwork
+from ..transport.adaptive_transport import AdaptiveTransport
+from .censorship_detector import CensorshipDetector, CensorshipType, ThreatLevel
+from .response_engine import ResponseEngine
+from .threat_monitor import ThreatMonitor
 
 
 # Condition evaluation system
@@ -23,7 +23,7 @@ class ConditionEvaluator(ABC):
     """Base class for condition evaluation."""
 
     @abstractmethod
-    def evaluate(self, context: Dict[str, Any]) -> bool:
+    def evaluate(self, context: dict[str, Any]) -> bool:
         """Evaluate the condition given the current context."""
         pass
 
@@ -40,7 +40,7 @@ class ThreatLevelCondition(ConditionEvaluator):
         self.operator = operator
         self.threshold = threshold
 
-    def evaluate(self, context: Dict[str, Any]) -> bool:
+    def evaluate(self, context: dict[str, Any]) -> bool:
         current_level = context.get("threat_level", ThreatLevel.NONE)
 
         if self.operator == ">=":
@@ -66,7 +66,7 @@ class CensorshipTypeCondition(ConditionEvaluator):
     def __init__(self, censorship_type: CensorshipType):
         self.censorship_type = censorship_type
 
-    def evaluate(self, context: Dict[str, Any]) -> bool:
+    def evaluate(self, context: dict[str, Any]) -> bool:
         detected_types = context.get("detected_censorship", [])
         return self.censorship_type in detected_types
 
@@ -82,7 +82,7 @@ class PerformanceCondition(ConditionEvaluator):
         self.operator = operator
         self.threshold = threshold
 
-    def evaluate(self, context: Dict[str, Any]) -> bool:
+    def evaluate(self, context: dict[str, Any]) -> bool:
         metrics = context.get("current_metrics")
         if not metrics:
             return False
@@ -115,7 +115,7 @@ class StabilityCondition(ConditionEvaluator):
         self.operator = operator
         self.duration = duration
 
-    def evaluate(self, context: Dict[str, Any]) -> bool:
+    def evaluate(self, context: dict[str, Any]) -> bool:
         stability_duration = context.get("stability_duration", 0.0)
 
         if self.operator == ">":
@@ -141,7 +141,7 @@ class CompoundCondition(ConditionEvaluator):
         self.operator = operator.upper()
         self.right = right
 
-    def evaluate(self, context: Dict[str, Any]) -> bool:
+    def evaluate(self, context: dict[str, Any]) -> bool:
         left_result = self.left.evaluate(context)
         right_result = self.right.evaluate(context)
 
@@ -165,7 +165,7 @@ class ConditionFactory:
     """
 
     @staticmethod
-    def create_from_dict(config: Dict[str, Any]) -> ConditionEvaluator:
+    def create_from_dict(config: dict[str, Any]) -> ConditionEvaluator:
         """Create a condition evaluator from a configuration dictionary."""
         condition_type = config.get("type")
 
@@ -272,7 +272,7 @@ class PerformanceMetrics:
     success_rate: float
     detection_accuracy: float
     adaptation_overhead: float
-    resource_usage: Dict[str, float] = field(default_factory=dict)
+    resource_usage: dict[str, float] = field(default_factory=dict)
 
 
 class AdaptiveControlLoop:
@@ -326,7 +326,7 @@ class AdaptiveControlLoop:
         self.threat_response_history: deque = deque(maxlen=max_adaptation_history)
 
         # Adaptation rules
-        self.adaptation_rules: List[AdaptationRule] = self._initialize_adaptation_rules()
+        self.adaptation_rules: list[AdaptationRule] = self._initialize_adaptation_rules()
 
         # Performance tracking
         self.baseline_metrics: Optional[PerformanceMetrics] = None
@@ -337,7 +337,7 @@ class AdaptiveControlLoop:
 
         self.logger.info("Adaptive Control Loop initialized")
 
-    def _initialize_adaptation_rules(self) -> List[AdaptationRule]:
+    def _initialize_adaptation_rules(self) -> list[AdaptationRule]:
         """
         Initialize default adaptation rules with robust condition evaluators.
 
@@ -566,7 +566,7 @@ class AdaptiveControlLoop:
             f"throughput={avg_throughput:.0f}B/s, success_rate={avg_success_rate:.3f}"
         )
 
-    async def _analyze_threats(self) -> Dict[str, Any]:
+    async def _analyze_threats(self) -> dict[str, Any]:
         """Analyze current threat landscape."""
         threat_analysis = {
             "threat_level": ThreatLevel.NONE,
@@ -626,7 +626,7 @@ class AdaptiveControlLoop:
 
         return threat_analysis
 
-    async def _evaluate_adaptations(self, threat_analysis: Dict[str, Any]) -> List[AdaptationRule]:
+    async def _evaluate_adaptations(self, threat_analysis: dict[str, Any]) -> list[AdaptationRule]:
         """Evaluate which adaptation rules should be triggered using new condition evaluators."""
         triggered_rules = []
         current_time = time.time()
@@ -660,7 +660,7 @@ class AdaptiveControlLoop:
 
         return triggered_rules
 
-    async def _execute_adaptations(self, rules: List[AdaptationRule]):
+    async def _execute_adaptations(self, rules: list[AdaptationRule]):
         """Execute triggered adaptation rules."""
         for rule in rules:
             try:
@@ -793,7 +793,7 @@ class AdaptiveControlLoop:
         except Exception as e:
             self.logger.error(f"Error configuring defensive mode: {e}")
 
-    async def _update_system_state(self, threat_analysis: Dict[str, Any]):
+    async def _update_system_state(self, threat_analysis: dict[str, Any]):
         """Update overall system state based on current conditions."""
         old_state = self.system_state
 
@@ -824,7 +824,7 @@ class AdaptiveControlLoop:
             f"state={self.system_state.name}"
         )
 
-    def get_system_status(self) -> Dict[str, Any]:
+    def get_system_status(self) -> dict[str, Any]:
         """Get comprehensive system status."""
         recent_adaptations = len(
             [

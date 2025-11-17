@@ -1,9 +1,9 @@
 """ML-KEM quantum-resistant key exchange."""
 
-from typing import Tuple, Dict
+import logging
+
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +16,8 @@ except ImportError:
 
         Kyber768 = kyber_py.Kyber768
     except (ImportError, AttributeError):  # Mock implementation for testing
-        import secrets
         import hashlib
+        import secrets
 
         class MockKyber768:
             @staticmethod
@@ -57,12 +57,12 @@ class MLKEMKeyExchange:
     CIPHERTEXT_SIZE = 1088  # ML-KEM-768 ciphertext size
     SHARED_SECRET_SIZE = 32  # Kyber-768 produces a 32-byte shared secret
 
-    def generate_keypair(self) -> Tuple[bytes, bytes]:
+    def generate_keypair(self) -> tuple[bytes, bytes]:
         """Generate a new ML-KEM-768 public/private key pair."""
         public_key, private_key = Kyber768.keygen()
         return public_key, private_key
 
-    def encapsulate(self, public_key: bytes) -> Tuple[bytes, bytes]:
+    def encapsulate(self, public_key: bytes) -> tuple[bytes, bytes]:
         """Create a shared secret and encapsulate it for the given public key."""
         if len(public_key) != self.PUBLIC_KEY_SIZE:
             raise ValueError(
@@ -82,7 +82,7 @@ class MLKEMKeyExchange:
         shared_secret = Kyber768.decaps(ciphertext, private_key)
         return shared_secret
 
-    def derive_keys(self, shared_secret: bytes, context: bytes = b"") -> Dict[str, bytes]:
+    def derive_keys(self, shared_secret: bytes, context: bytes = b"") -> dict[str, bytes]:
         """Derive symmetric keys from the shared secret using HKDF."""
         hkdf = HKDF(
             algorithm=hashes.SHA256(),
@@ -100,7 +100,7 @@ class MLKEMKeyExchange:
             "nonce": key_material[96:128],
         }
 
-    def derive_symmetric_keys(self, shared_secret: bytes, context: bytes = b"") -> Dict[str, bytes]:
+    def derive_symmetric_keys(self, shared_secret: bytes, context: bytes = b"") -> dict[str, bytes]:
         """
         Derive symmetric keys from shared secret with context.
 
@@ -108,7 +108,7 @@ class MLKEMKeyExchange:
         """
         return self.derive_keys(shared_secret, context)
 
-    def get_parameters(self) -> Dict[str, int]:
+    def get_parameters(self) -> dict[str, int]:
         """
         Return static parameter information about the underlying ML-KEM suite.
 

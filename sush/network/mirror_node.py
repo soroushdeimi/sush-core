@@ -1,14 +1,15 @@
 """Mirror nodes acting as covert relay services."""
 
 import logging
-import time
+import secrets
 import ssl
-from typing import Dict, List, Optional, Any
+import time
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import Any, Optional
+
 import aiohttp
-from aiohttp import web, ClientSession
-import secrets
+from aiohttp import ClientSession, web
 
 
 class NodeType(Enum):
@@ -38,8 +39,8 @@ class LegitimateService:
     name: str
     base_url: str
     service_type: ServiceType
-    headers: Dict[str, str]
-    endpoints: List[str]
+    headers: dict[str, str]
+    endpoints: list[str]
     ssl_verify: bool = True
 
 
@@ -76,9 +77,9 @@ class MirrorNode:
         self.ssl_port = ssl_port
         self.node_id = self._generate_node_id()
         self.credentials = self._generate_credentials()
-        self.legitimate_services: Dict[str, LegitimateService] = {}
+        self.legitimate_services: dict[str, LegitimateService] = {}
         self.current_service: Optional[str] = None
-        self.active_circuits: Dict[str, Dict[str, Any]] = {}
+        self.active_circuits: dict[str, dict[str, Any]] = {}
         self.relay_stats = {
             "circuits_created": 0,
             "circuits_destroyed": 0,
@@ -383,7 +384,7 @@ class MirrorNode:
             new_service = secrets.choice(available_services)
             self.set_current_service(new_service)
 
-    def get_node_info(self) -> Dict[str, Any]:
+    def get_node_info(self) -> dict[str, Any]:
         return {
             "node_id": self.node_id,
             "node_type": self.node_type.name,
@@ -396,7 +397,7 @@ class MirrorNode:
             "statistics": self.relay_stats,
         }
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         uptime = time.time() - self.relay_stats["uptime_start"]
         return {
             "uptime_seconds": uptime,

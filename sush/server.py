@@ -1,22 +1,22 @@
 """sushCore server implementation."""
 
 import asyncio
-import logging
-import time
 import json
-from typing import Dict, List, Optional, Any, Set
-from dataclasses import dataclass
+import logging
 import secrets
+import time
+from dataclasses import dataclass
+from typing import Any, Optional
 
-from .core.quantum_obfuscator import QuantumObfuscator
-from .transport.adaptive_transport import AdaptiveTransport
-from .network.mirror_network import MirrorNetwork
-from .network.onion_routing import OnionRoutingProtocol
-from .network.node_integrity import SimplifiedNodeIntegrity
 from .control.adaptive_control import AdaptiveControlLoop
 from .control.censorship_detector import CensorshipDetector
-from .control.threat_monitor import ThreatMonitor
 from .control.response_engine import ResponseEngine
+from .control.threat_monitor import ThreatMonitor
+from .core.quantum_obfuscator import QuantumObfuscator
+from .network.mirror_network import MirrorNetwork
+from .network.node_integrity import SimplifiedNodeIntegrity
+from .network.onion_routing import OnionRoutingProtocol
+from .transport.adaptive_transport import AdaptiveTransport
 
 
 @dataclass
@@ -30,7 +30,7 @@ class ServerConfig:
 
     # Network configuration
     listen_address: str = "0.0.0.0"
-    listen_ports: List[int] = None
+    listen_ports: list[int] = None
     external_address: Optional[str] = None
     bandwidth_limit: int = 100_000_000  # 100 Mbps
 
@@ -43,8 +43,8 @@ class ServerConfig:
 
     # Security settings
     require_authentication: bool = True
-    allowed_countries: Optional[List[str]] = None
-    blocked_ips: Set[str] = None
+    allowed_countries: Optional[list[str]] = None
+    blocked_ips: set[str] = None
 
     # Performance settings
     connection_timeout: float = 60.0
@@ -305,10 +305,10 @@ class SushServer:
         # Server state
         self.is_running = False
         self.start_time = 0.0
-        self.servers: List[asyncio.Server] = []
-        self.active_connections: Dict[str, ConnectionHandler] = {}
-        self.active_circuits: Dict[int, Any] = {}
-        self.relay_connections: Dict[str, Any] = {}
+        self.servers: list[asyncio.Server] = []
+        self.active_connections: dict[str, ConnectionHandler] = {}
+        self.active_circuits: dict[int, Any] = {}
+        self.relay_connections: dict[str, Any] = {}
 
         # Statistics
         self.stats = {
@@ -522,7 +522,7 @@ class SushServer:
             await handler._cleanup()
 
         # Close relay connections
-        for connection_id, connection in list(self.relay_connections.items()):
+        for _connection_id, connection in list(self.relay_connections.items()):
             try:
                 connection["writer"].close()
                 await connection["writer"].wait_closed()
@@ -562,7 +562,7 @@ class SushServer:
 
             await asyncio.sleep(self.config.cleanup_interval)
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Get comprehensive server status."""
         uptime = time.time() - self.start_time if self.is_running else 0
 
@@ -580,7 +580,7 @@ class SushServer:
             "integrity_status": self.node_integrity.get_statistics(),
         }
 
-    def get_node_info(self) -> Dict[str, Any]:
+    def get_node_info(self) -> dict[str, Any]:
         """Get node information for directory services."""
         return {
             "node_id": self.config.node_id,

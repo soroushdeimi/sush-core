@@ -4,10 +4,10 @@ Configuration management for SpectralFlow.
 Supports config files and environment variables for deployment flexibility.
 """
 
-import os
 import configparser
-from typing import Dict, Any, Optional
+import os
 from pathlib import Path
+from typing import Any, Optional
 
 
 class SpectralFlowConfig:
@@ -65,7 +65,7 @@ class SpectralFlowConfig:
             return value.lower() in ("true", "1", "yes", "on")
         return default
 
-    def validate_required(self, required_configs: Dict[str, str]):
+    def validate_required(self, required_configs: dict[str, str]):
         """Validate that required configurations are present."""
         missing = []
         for section_key, description in required_configs.items():

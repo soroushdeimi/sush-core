@@ -3,13 +3,13 @@ Protocol Hopper - Dynamic port and protocol switching
 """
 
 import asyncio
-import socket
 import hashlib
-from typing import List, Tuple, Optional, Dict, Any
-from enum import Enum, auto
-from dataclasses import dataclass
-import secrets
 import logging
+import secrets
+import socket
+from dataclasses import dataclass
+from enum import Enum, auto
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -44,16 +44,16 @@ class TransportProtocol(Enum):
 class HopSequence:
     """Port/protocol hopping sequence."""
 
-    ports: List[int]
-    protocols: List[TransportProtocol]
-    timing_intervals: List[float]
+    ports: list[int]
+    protocols: list[TransportProtocol]
+    timing_intervals: list[float]
     seed: bytes
 
 
 class ProtocolHopper:
     """Dynamic port and protocol hopping for evasion."""
 
-    def __init__(self, port_range: Tuple[int, int] = (10000, 65000), hop_interval: float = 30.0):
+    def __init__(self, port_range: tuple[int, int] = (10000, 65000), hop_interval: float = 30.0):
         self.logger = logging.getLogger(__name__)
         self.port_range = port_range
         self.hop_interval = hop_interval
@@ -180,7 +180,7 @@ class ProtocolHopper:
                 self.state = (self.state * 1103515245 + 12345) & 0x7FFFFFFF
                 return a + (self.state / 0x7FFFFFFF) * (b - a)
 
-            def choices(self, population: List, weights: List):
+            def choices(self, population: list, weights: list):
                 # Simplified weighted choice
                 total = sum(weights)
                 r = self.uniform(0, total)
@@ -329,7 +329,7 @@ class ProtocolHopper:
                 "host": target_host,
             }
         except Exception as exc:
-            raise ConnectionError(f"TCP connection failed: {exc}")
+            raise ConnectionError("TCP connection failed") from exc
 
     async def _create_udp_connection(self, target_host: str, port: int, timeout: float):
         """Create UDP connection."""
@@ -339,7 +339,7 @@ class ProtocolHopper:
             await asyncio.get_event_loop().sock_connect(sock, (target_host, port))
             return {"socket": sock, "type": "udp", "target": (target_host, port)}
         except Exception as exc:
-            raise ConnectionError(f"UDP connection failed: {exc}")
+            raise ConnectionError("UDP connection failed") from exc
 
     async def _create_quic_connection(self, target_host: str, port: int, timeout: float):
         """
@@ -417,11 +417,11 @@ class ProtocolHopper:
             # Fallback to TCP
             return await self._create_tcp_connection(target_host, port, timeout)
 
-    def get_current_endpoint(self) -> Tuple[int, TransportProtocol]:
+    def get_current_endpoint(self) -> tuple[int, TransportProtocol]:
         """Get current port and protocol."""
         return self.current_port, self.current_protocol
 
-    def predict_next_hop(self, session_id: str) -> Optional[Tuple[int, TransportProtocol]]:
+    def predict_next_hop(self, session_id: str) -> Optional[tuple[int, TransportProtocol]]:
         """
         Predict the next hop in the sequence.
 
@@ -456,7 +456,7 @@ class ProtocolHopper:
 
         self.logger.info("Stopped protocol hopping")
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get hopping statistics."""
         return {
             "current_port": self.current_port,

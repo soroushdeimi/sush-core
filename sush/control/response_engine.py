@@ -5,7 +5,7 @@ import random
 import time
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 from .censorship_detector import CensorshipType, ThreatEvent, ThreatLevel
 
@@ -36,9 +36,9 @@ class ResponsePriority(Enum):
 class ResponseRule:
     """Defines an automated response rule."""
 
-    threat_types: List[CensorshipType]
+    threat_types: list[CensorshipType]
     min_threat_level: ThreatLevel
-    actions: List[ResponseAction]
+    actions: list[ResponseAction]
     priority: ResponsePriority
     cooldown: float = 60.0  # seconds before rule can trigger again
     confidence_threshold: float = 0.7
@@ -50,10 +50,10 @@ class ResponseContext:
     """Context information for response execution."""
 
     threat: ThreatEvent
-    available_protocols: List[str]
-    available_ports: List[int]
+    available_protocols: list[str]
+    available_ports: list[int]
     current_obfuscation_level: int
-    network_conditions: Dict[str, Any]
+    network_conditions: dict[str, Any]
 
 
 class ResponseEngine:
@@ -66,9 +66,9 @@ class ResponseEngine:
 
     def __init__(self):
         self.is_active = False
-        self.response_rules: List[ResponseRule] = []
-        self.response_handlers: Dict[ResponseAction, Callable] = {}
-        self.response_history: List[Dict[str, Any]] = []
+        self.response_rules: list[ResponseRule] = []
+        self.response_handlers: dict[ResponseAction, Callable] = {}
+        self.response_history: list[dict[str, Any]] = []
 
         # Response state
         self.current_obfuscation_level = 1
@@ -141,7 +141,7 @@ class ResponseEngine:
 
         # Critical threat response
         critical_rule = ResponseRule(
-            threat_types=[t for t in CensorshipType],  # All types
+            threat_types=list(CensorshipType),  # All types
             min_threat_level=ThreatLevel.CRITICAL,
             actions=[ResponseAction.EMERGENCY_SHUTDOWN],
             priority=ResponsePriority.CRITICAL,
@@ -198,7 +198,7 @@ class ResponseEngine:
                 rule.last_triggered = time.time()
                 break  # Execute only the highest priority rule
 
-    def _find_applicable_rules(self, threat: ThreatEvent) -> List[ResponseRule]:
+    def _find_applicable_rules(self, threat: ThreatEvent) -> list[ResponseRule]:
         """Find response rules applicable to the threat."""
         applicable = []
 
@@ -393,7 +393,7 @@ class ResponseEngine:
             f"Added custom response rule with actions: {[a.name for a in rule.actions]}"
         )
 
-    def get_response_statistics(self) -> Dict[str, Any]:
+    def get_response_statistics(self) -> dict[str, Any]:
         """Get response engine statistics."""
         if not self.response_history:
             return {"total_responses": 0, "current_state": self._get_current_state()}
@@ -416,7 +416,7 @@ class ResponseEngine:
             "handlers_count": len(self.response_handlers),
         }
 
-    def _get_current_state(self) -> Dict[str, Any]:
+    def _get_current_state(self) -> dict[str, Any]:
         """Get current response engine state."""
         return {
             "is_active": self.is_active,

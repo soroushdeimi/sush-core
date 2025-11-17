@@ -4,13 +4,13 @@ Adaptive Transport - Coordinate transport layer components
 
 import asyncio
 import logging
-from typing import Dict, Optional, Any
-from enum import Enum, auto
 from dataclasses import dataclass
+from enum import Enum, auto
+from typing import Any, Optional
 
+from .metadata_channels import MetadataChannels
 from .protocol_hopper import ProtocolHopper
 from .steganographic_channels import ChannelManager
-from .metadata_channels import MetadataChannels
 
 
 class TransportMode(Enum):
@@ -49,7 +49,7 @@ class AdaptiveTransport:
         self.metadata_channels = MetadataChannels()
 
         # Runtime state
-        self.active_connections: Dict[str, Dict[str, Any]] = {}
+        self.active_connections: dict[str, dict[str, Any]] = {}
         self._aggressiveness = 0.5
         self._steganography_enabled = self.config.enable_steganography
         self._traffic_signature_minimized = False
@@ -62,7 +62,7 @@ class AdaptiveTransport:
             "steganographic_bytes": 0,
         }
 
-    async def configure(self, options: Dict[str, Any]) -> None:
+    async def configure(self, options: dict[str, Any]) -> None:
         """
         Apply configuration coming from the higher layers.
 
@@ -119,7 +119,7 @@ class AdaptiveTransport:
             self.logger.error(f"Failed to establish connection to {target}: {e}")
             raise
 
-    async def _establish_direct_connection(self, target: str) -> Dict:
+    async def _establish_direct_connection(self, target: str) -> dict:
         """Establish direct connection with protocol hopping."""
         if self.config.enable_hopping:
             # Create hopping sequence
@@ -135,21 +135,21 @@ class AdaptiveTransport:
 
         return resource
 
-    async def _establish_steganographic_connection(self, target: str) -> Dict:
+    async def _establish_steganographic_connection(self, target: str) -> dict:
         """Establish steganographic connection."""
         channel = self.config.steganographic_channel
         self.stego_channels.switch_channel(channel)
 
         return {"type": "steganographic", "channel": channel, "target": target}
 
-    async def _establish_metadata_connection(self, target: str) -> Dict:
+    async def _establish_metadata_connection(self, target: str) -> dict:
         """Establish metadata-only connection."""
         channel = self.config.metadata_channel
         self.metadata_channels.switch_channel(channel)
 
         return {"type": "metadata", "channel": channel, "target": target}
 
-    async def _establish_hybrid_connection(self, target: str) -> Dict:
+    async def _establish_hybrid_connection(self, target: str) -> dict:
         """Establish hybrid connection using multiple methods."""
         # Use steganographic for data, metadata for control
         stego_conn = await self._establish_steganographic_connection(target)
@@ -194,7 +194,7 @@ class AdaptiveTransport:
             self.logger.error(f"Failed to send data on connection {connection_id}: {e}")
             return False
 
-    async def _send_direct_data(self, connection: Dict, data: bytes) -> bool:
+    async def _send_direct_data(self, connection: dict, data: bytes) -> bool:
         """Send data through direct connection."""
         if connection["type"] == "tcp":
             writer = connection["writer"]
@@ -242,7 +242,7 @@ class AdaptiveTransport:
             self.logger.error(f"Failed to receive data on connection {connection_id}: {e}")
             return None
 
-    async def _receive_direct_data(self, connection: Dict, timeout: float) -> Optional[bytes]:
+    async def _receive_direct_data(self, connection: dict, timeout: float) -> Optional[bytes]:
         """Receive data from direct connection."""
         if connection["type"] == "tcp":
             reader = connection["reader"]
@@ -273,7 +273,7 @@ class AdaptiveTransport:
         except Exception as e:
             self.logger.error(f"Error closing connection {connection_id}: {e}")
 
-    async def _close_direct_connection(self, connection: Dict):
+    async def _close_direct_connection(self, connection: dict):
         """Close direct connection."""
         if connection["type"] == "tcp":
             writer = connection["writer"]
@@ -315,7 +315,7 @@ class AdaptiveTransport:
         self._redundancy_enabled = True
         self.logger.debug("Transport redundancy enabled")
 
-    async def get_performance_metrics(self) -> Dict[str, Any]:
+    async def get_performance_metrics(self) -> dict[str, Any]:
         """Expose metrics for the adaptive control loop."""
         return {
             "mode": self.config.mode.name,
@@ -326,7 +326,7 @@ class AdaptiveTransport:
             "hopping_enabled": self.config.enable_hopping,
         }
 
-    def adapt_to_conditions(self, network_conditions: Dict[str, Any]):
+    def adapt_to_conditions(self, network_conditions: dict[str, Any]):
         """Adapt transport strategy based on network conditions."""
         threat_level = network_conditions.get("threat_level", "low")
         packet_loss = network_conditions.get("packet_loss", 0.0)
@@ -345,7 +345,7 @@ class AdaptiveTransport:
 
         self.logger.info(f"Adapted to {self.config.mode.name} mode based on conditions")
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get transport layer statistics."""
         return {
             "active_connections": len(self.active_connections),
@@ -360,11 +360,11 @@ class AdaptiveTransport:
             "steganography_enabled": self._steganography_enabled,
         }
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Alias for get_statistics for compatibility."""
         return self.get_statistics()
 
-    def get_performance_metrics(self) -> Dict[str, float]:
+    def get_performance_metrics(self) -> dict[str, float]:
         """Return lightweight performance metrics for adaptive control."""
         return {
             "avg_latency": 0.0,
@@ -373,7 +373,7 @@ class AdaptiveTransport:
             "aggressiveness": self._aggressiveness,
         }
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Provide a richer snapshot for user-facing status commands."""
         return {
             "mode": self.config.mode.name,

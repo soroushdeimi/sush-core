@@ -1,10 +1,11 @@
 """Quantum-resistant obfuscation system."""
 
 import logging
-from typing import Dict, Any, Optional, Tuple, List
 from dataclasses import dataclass
+from typing import Any, Optional
+
+from .adaptive_cipher import AdaptiveCipherSuite, NetworkCondition, ThreatLevel
 from .ml_kem import MLKEMKeyExchange
-from .adaptive_cipher import AdaptiveCipherSuite, ThreatLevel, NetworkCondition
 from .traffic_morphing import TrafficMorphingEngine
 
 
@@ -17,7 +18,7 @@ class ObfuscationContext:
     network_condition: NetworkCondition
     peer_public_key: Optional[bytes] = None
     shared_secret: Optional[bytes] = None
-    derived_keys: Optional[Dict[str, bytes]] = None
+    derived_keys: Optional[dict[str, bytes]] = None
 
 
 class QuantumObfuscator:
@@ -35,7 +36,7 @@ class QuantumObfuscator:
         self.public_key, self.private_key = self.kem.generate_keypair()
 
         # Active sessions
-        self.sessions: Dict[str, ObfuscationContext] = {}
+        self.sessions: dict[str, ObfuscationContext] = {}
 
         self.logger.info("Quantum Obfuscator initialized with ML-KEM-768")
 
@@ -132,7 +133,7 @@ class QuantumObfuscator:
 
     async def obfuscate_data(
         self, session_id: str, data: bytes, additional_data: bytes = b""
-    ) -> List[bytes]:
+    ) -> list[bytes]:
         """
         Obfuscate data using quantum-resistant encryption and traffic morphing.
 
@@ -166,7 +167,7 @@ class QuantumObfuscator:
         return morphed_packets
 
     async def deobfuscate_data(
-        self, session_id: str, packets: List[bytes], additional_data: bytes = b""
+        self, session_id: str, packets: list[bytes], additional_data: bytes = b""
     ) -> bytes:
         """
         Deobfuscate data by reversing traffic morphing and decryption.
@@ -244,7 +245,7 @@ class QuantumObfuscator:
 
         return packet
 
-    def _parse_encrypted_packet(self, packet: bytes) -> Tuple[bytes, bytes, bytes]:
+    def _parse_encrypted_packet(self, packet: bytes) -> tuple[bytes, bytes, bytes]:
         """
         Parse encrypted packet to extract components.
 
@@ -269,7 +270,7 @@ class QuantumObfuscator:
 
         return ciphertext, iv, tag
 
-    def _reconstruct_encrypted_packet(self, packets: List[bytes]) -> bytes:
+    def _reconstruct_encrypted_packet(self, packets: list[bytes]) -> bytes:
         """
         Reconstruct original encrypted packet from morphed packets.
 
@@ -350,7 +351,7 @@ class QuantumObfuscator:
             f"network={network_condition.name}, cipher={new_profile}"
         )
 
-    def get_session_info(self, session_id: str) -> Dict[str, Any]:
+    def get_session_info(self, session_id: str) -> dict[str, Any]:
         """Get information about a session."""
         if session_id not in self.sessions:
             return {}
@@ -377,7 +378,7 @@ class QuantumObfuscator:
         """Get our public key for key exchange."""
         return self.public_key
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get overall obfuscator statistics."""
         return {
             "active_sessions": len(self.sessions),

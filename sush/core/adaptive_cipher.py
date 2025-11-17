@@ -2,12 +2,12 @@
 
 import os
 import time
-from typing import List, Tuple
-from enum import Enum, auto
 from dataclasses import dataclass
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305, AESGCM
+from enum import Enum, auto
+
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM, ChaCha20Poly1305
 
 
 class ThreatLevel(Enum):
@@ -68,7 +68,7 @@ class AdaptiveCipherSuite:
             self.active_cipher = new_cipher
             self.cipher_transitions.append((time.time(), new_cipher))
 
-    def encrypt(self, data: bytes, additional_data: bytes = b"") -> Tuple[bytes, bytes, bytes]:
+    def encrypt(self, data: bytes, additional_data: bytes = b"") -> tuple[bytes, bytes, bytes]:
         if not self.encryption_key:
             raise ValueError("No encryption key set")
 
@@ -125,7 +125,7 @@ class AdaptiveCipherSuite:
 
     def _encrypt_aes_gcm(
         self, data: bytes, key: bytes, profile: CipherProfile, additional_data: bytes = b""
-    ) -> Tuple[bytes, bytes]:
+    ) -> tuple[bytes, bytes]:
         iv = os.urandom(profile.iv_size)
         cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
         encryptor = cipher.encryptor()
@@ -160,7 +160,7 @@ class AdaptiveCipherSuite:
 
     def _encrypt_chacha20(
         self, data: bytes, key: bytes, profile: CipherProfile, additional_data: bytes = b""
-    ) -> Tuple[bytes, bytes]:
+    ) -> tuple[bytes, bytes]:
         cipher = ChaCha20Poly1305(key)
         nonce = os.urandom(12)
         ciphertext = cipher.encrypt(nonce, data, additional_data)
@@ -179,11 +179,11 @@ class AdaptiveCipherSuite:
             plaintext = cipher.decrypt(nonce, ciphertext, additional_data)
             return plaintext
         except Exception as e:
-            raise ValueError(f"ChaCha20-Poly1305 decryption failed: {e}")
+            raise ValueError("ChaCha20-Poly1305 decryption failed") from e
 
     def _encrypt_aes_ocb(
         self, data: bytes, key: bytes, profile: CipherProfile, additional_data: bytes = b""
-    ) -> Tuple[bytes, bytes]:
+    ) -> tuple[bytes, bytes]:
         cipher = AESGCM(key)
         nonce = os.urandom(12)
         ciphertext = cipher.encrypt(nonce, data, additional_data)
@@ -202,7 +202,7 @@ class AdaptiveCipherSuite:
             plaintext = cipher.decrypt(nonce, ciphertext, additional_data)
             return plaintext
         except Exception as e:
-            raise ValueError(f"AES-GCM decryption failed: {e}")
+            raise ValueError("AES-GCM decryption failed") from e
 
     def get_current_profile_info(self) -> dict:
         profile = self.cipher_profiles[self.active_cipher]
@@ -215,7 +215,7 @@ class AdaptiveCipherSuite:
             "stealth_score": profile.stealth_score,
         }
 
-    def get_transition_history(self) -> List[Tuple[float, str]]:
+    def get_transition_history(self) -> list[tuple[float, str]]:
         return self.cipher_transitions.copy()
 
 

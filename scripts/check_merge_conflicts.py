@@ -6,7 +6,6 @@ This script detects actual merge conflict markers, not false positives
 like print("==========") or other legitimate uses of equal signs.
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -20,7 +19,7 @@ def has_merge_conflicts(file_path: Path) -> list[str]:
     conflicts = []
 
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             lines = f.readlines()
 
         for i, line in enumerate(lines, 1):

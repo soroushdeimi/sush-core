@@ -5,11 +5,12 @@ sushCore Client Example
 Demonstrates how to use the sushCore client for censorship circumvention.
 """
 
+import argparse
 import asyncio
 import logging
 import sys
-import argparse
-from sush.client import SushClient, ClientConfig
+
+from sush.client import ClientConfig, SushClient
 
 
 async def simple_connection_example():

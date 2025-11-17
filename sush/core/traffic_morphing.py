@@ -3,10 +3,10 @@ Traffic Morphing Engine - Eliminate statistical fingerprints
 """
 
 import os
-import time
 import random
-from typing import List, Dict, Any
+import time
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -32,7 +32,7 @@ class TrafficMorphingEngine:
         self.active_profile = "web_browsing"
         self.packet_buffer = []
 
-    def morph_packet(self, data: bytes) -> List[bytes]:
+    def morph_packet(self, data: bytes) -> list[bytes]:
         """Transform packet to match traffic profile."""
         profile = self.profiles[self.active_profile]
 
@@ -64,7 +64,7 @@ class TrafficMorphingEngine:
 
         return data + padding
 
-    def _fragment_packet(self, data: bytes, max_size: int) -> List[bytes]:
+    def _fragment_packet(self, data: bytes, max_size: int) -> list[bytes]:
         """Fragment large packet into smaller ones."""
         fragments = []
 
@@ -136,7 +136,7 @@ class TrafficMorphingEngine:
         if profile_name in self.profiles:
             self.active_profile = profile_name
 
-    def create_decoy_traffic(self, duration: float = 10.0) -> List[bytes]:
+    def create_decoy_traffic(self, duration: float = 10.0) -> list[bytes]:
         """Generate decoy traffic packets."""
         profile = self.profiles[self.active_profile]
         packets = []
@@ -154,7 +154,7 @@ class TrafficMorphingEngine:
 
         return packets
 
-    def analyze_traffic_pattern(self, packets: List[bytes]) -> Dict[str, Any]:
+    def analyze_traffic_pattern(self, packets: list[bytes]) -> dict[str, Any]:
         """Analyze traffic for fingerprinting risks."""
         if not packets:
             return {}
@@ -170,7 +170,7 @@ class TrafficMorphingEngine:
             "fingerprint_risk": self._assess_fingerprint_risk(sizes),
         }
 
-    def _calculate_variance(self, values: List[int]) -> float:
+    def _calculate_variance(self, values: list[int]) -> float:
         """Calculate variance of values."""
         if len(values) < 2:
             return 0.0
@@ -179,7 +179,7 @@ class TrafficMorphingEngine:
         variance = sum((x - mean) ** 2 for x in values) / len(values)
         return variance
 
-    def _assess_fingerprint_risk(self, sizes: List[int]) -> str:
+    def _assess_fingerprint_risk(self, sizes: list[int]) -> str:
         """Assess fingerprinting risk based on packet sizes."""
         variance = self._calculate_variance(sizes)
 
@@ -190,7 +190,7 @@ class TrafficMorphingEngine:
         else:
             return "low"
 
-    def get_profile_info(self) -> Dict[str, Any]:
+    def get_profile_info(self) -> dict[str, Any]:
         """Get current profile information."""
         profile = self.profiles[self.active_profile]
 
@@ -222,7 +222,7 @@ class TrafficMorphingEngine:
         # If no padding detected, return as-is
         return morphed_packet
 
-    def update_strategy(self, network_conditions: Dict[str, Any]):
+    def update_strategy(self, network_conditions: dict[str, Any]):
         """Update morphing strategy based on network conditions."""
         threat_level = network_conditions.get("threat_level", "medium")
         bandwidth = network_conditions.get("bandwidth", 1000000)
@@ -235,7 +235,7 @@ class TrafficMorphingEngine:
         else:
             self.active_profile = "web_browsing"  # Default
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get morphing engine statistics."""
         return {
             "active_profile": self.active_profile,

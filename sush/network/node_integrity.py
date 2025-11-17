@@ -5,16 +5,16 @@ Implements a lightweight reputation management system for maintaining node
 reliability in the MirrorNet without complex blockchain operations.
 """
 
-import logging
-import time
 import hashlib
 import json
-from typing import Dict, List, Optional, Set, Any
+import logging
+import time
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import Any, Optional
 
-from nacl.signing import SigningKey, VerifyKey
 from nacl.exceptions import BadSignatureError
+from nacl.signing import SigningKey, VerifyKey
 
 
 class NodeStatus(Enum):
@@ -37,10 +37,10 @@ class NodeRecord:
     last_seen: float
     reputation_score: float
     status: NodeStatus
-    endorsements: Set[str]
-    complaints: Set[str]
-    uptime_reports: List[float]
-    bandwidth_reports: List[float]
+    endorsements: set[str]
+    complaints: set[str]
+    uptime_reports: list[float]
+    bandwidth_reports: list[float]
     stake: float = 0.0
 
 
@@ -80,9 +80,9 @@ class SimplifiedNodeIntegrity:
             self.signing_key = SigningKey(key_hash)
         self.private_key = private_key
         self.public_key = self.signing_key.verify_key
-        self.node_registry: Dict[str, NodeRecord] = {}
-        self.performance_reports: List[PerformanceReport] = []
-        self.public_key_cache: Dict[str, VerifyKey] = {}
+        self.node_registry: dict[str, NodeRecord] = {}
+        self.performance_reports: list[PerformanceReport] = []
+        self.public_key_cache: dict[str, VerifyKey] = {}
         self.reputation_decay_rate = 0.01
         self.min_reputation = 0.0
         self.max_reputation = 1.0
@@ -203,7 +203,7 @@ class SimplifiedNodeIntegrity:
             return self.node_registry[node_id].reputation_score
         return None
 
-    def get_trusted_nodes(self) -> List[str]:
+    def get_trusted_nodes(self) -> list[str]:
         return [
             node_id
             for node_id, record in self.node_registry.items()
@@ -297,7 +297,7 @@ class SimplifiedNodeIntegrity:
             self.logger.error(f"Error verifying signature from node {node_id}: {e}")
             return False
 
-    def get_network_statistics(self) -> Dict[str, Any]:
+    def get_network_statistics(self) -> dict[str, Any]:
         if not self.node_registry:
             return {}
         reputations = [record.reputation_score for record in self.node_registry.values()]

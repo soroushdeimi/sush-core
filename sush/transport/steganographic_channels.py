@@ -2,13 +2,13 @@
 Steganographic Channels - Hide data in network protocols
 """
 
+import asyncio
+import logging
+import socket
 import struct
 import time
-import socket
-import asyncio
-from typing import Dict, Optional
 from abc import ABC, abstractmethod
-import logging
+from typing import Optional
 
 # Import scapy for raw packet manipulation
 try:
@@ -274,7 +274,7 @@ class ChannelManager:
         if channel in self.channels:
             self.active_channel = channel
 
-    def get_channel_info(self) -> Dict[str, Dict]:
+    def get_channel_info(self) -> dict[str, dict]:
         """Get information about available channels."""
         return {
             "ntp": {"capacity": "8 bytes/packet", "stealth": "high", "bandwidth": "low"},

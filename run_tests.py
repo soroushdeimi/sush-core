@@ -2,8 +2,8 @@
 """sushCore test suite runner (production readiness validation)."""
 
 import os
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 
