@@ -1,0 +1,21 @@
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "I",  # import sorting
+]
+ignore = []
+
+[lint.per-file-ignores]
+# These tests intentionally import many symbols just to validate importability.
+"tests/test_core_components.py" = ["F401"]
+"tests/test_integration.py" = ["F401"]
+# Optional dependencies - imports are checked for availability
+"sush/transport/protocol_hopper.py" = ["F401"]
+"sush/transport/steganographic_channels.py" = ["F401"]
+
+
+

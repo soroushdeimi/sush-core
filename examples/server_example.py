@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Sushcore Server Example
+sushCore Server Example
 
-Demonstrates how to run a SpectralFlow server/mirror node.
+Demonstrates how to run a sushCore server/mirror node.
 """
 
 import asyncio
@@ -10,7 +10,7 @@ import logging
 import sys
 import argparse
 import signal
-from spectralflow.server import SpectralFlowServer, ServerConfig
+from sush.server import SushServer, ServerConfig
 
 
 class GracefulExit(SystemExit):
@@ -25,7 +25,7 @@ def signal_handler(signum, frame):
 
 
 async def run_basic_server():
-    """Run a basic SpectralFlow server."""
+    """Run a basic sushCore server."""
     print("=== Basic Server Example ===")
     
     config = ServerConfig(
@@ -36,7 +36,7 @@ async def run_basic_server():
         log_level="INFO"
     )
     
-    server = SpectralFlowServer(config)
+    server = SushServer(config)
     
     try:
         await server.start()
@@ -74,7 +74,7 @@ async def run_bridge_relay():
         log_level="INFO"
     )
     
-    server = SpectralFlowServer(config)
+    server = SushServer(config)
     
     try:
         await server.start()
@@ -117,7 +117,7 @@ async def run_directory_server():
         log_level="INFO"
     )
     
-    server = SpectralFlowServer(config)
+    server = SushServer(config)
     
     try:
         await server.start()
@@ -160,7 +160,7 @@ async def run_high_performance_server():
         log_level="WARNING"  # Reduce logging overhead
     )
     
-    server = SpectralFlowServer(config)
+    server = SushServer(config)
     
     try:
         await server.start()
@@ -208,7 +208,7 @@ async def run_monitoring_server():
         log_level="DEBUG"
     )
     
-    server = SpectralFlowServer(config)
+    server = SushServer(config)
     
     try:
         await server.start()
@@ -223,7 +223,7 @@ async def run_monitoring_server():
             status = server.get_status()
             
             print("\n" + "="*60)
-            print(f"SPECTRALFLOW SERVER STATUS - Uptime: {status['uptime']:.1f}s")
+            print(f"sushCore Server Status - Uptime: {status['uptime']:.1f}s")
             print("="*60)
             
             print(f"Connections: {status['active_connections']} active, "
@@ -263,7 +263,7 @@ async def run_monitoring_server():
 
 async def main():
     """Main function to run server examples."""
-    parser = argparse.ArgumentParser(description="SpectralFlow Server Examples")
+    parser = argparse.ArgumentParser(description="sushCore server examples")
     parser.add_argument(
         "--mode",
         choices=["basic", "bridge", "directory", "performance", "monitoring"],
@@ -295,7 +295,7 @@ async def main():
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
-    print("SpectralFlow Server Examples")
+    print("sushCore server examples")
     print("============================")
     
     try:

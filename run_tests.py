@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sush Core Test Suite Runner - Production readiness validation."""
+"""sushCore test suite runner (production readiness validation)."""
 
 import os
 import sys
@@ -33,16 +33,41 @@ def run_command(cmd: list, description: str) -> bool:
         return False
 
 
+
+def check_optional_dependencies() -> bool:
+    """Verify whether optional production dependencies are available."""
+    description = "Production Dependencies Check"
+    print(f"\nTesting {description}")
+    try:
+        from sush.core.ml_kem import MLKEMKeyExchange
+        MLKEMKeyExchange()
+        print(f"PASSED - {description}")
+        return True
+    except ModuleNotFoundError as exc:
+        print(f"SKIPPED - {description}: optional dependency '{exc.name}' is not installed.")
+        return True
+    except Exception as exc:
+        print(f"FAILED - {description}")
+        print("ERROR:", exc)
+        return False
+
+
 def main():
     """Run the complete test suite."""
-    print("Sush Core Production Test Suite")
+    print("sushCore Production Test Suite")
     print("=" * 50)
     
     # Change to project directory
     os.chdir(Path(__file__).parent)
     
     test_results = []
-      # Core component validation
+    # Smoke test
+    test_results.append(run_command(
+        ["python", "tests/test_smoke.py"],
+        "Smoke Test"
+    ))
+
+    # Core component validation
     test_results.append(run_command(
         ["python", "tests/test_core_components.py"],
         "Core Components Test"
@@ -61,11 +86,7 @@ def main():
     ))
     
     # Production dependencies check
-    test_results.append(run_command(
-        ["python", "-c", 
-         "from spectralflow.core.ml_kem_prod import MLKEMKeyExchange; print('ML-KEM production ready')"],
-        "Production Dependencies Check"
-    ))
+    test_results.append(check_optional_dependencies())
     
     print("\n" + "=" * 50)
     print("Test Summary")

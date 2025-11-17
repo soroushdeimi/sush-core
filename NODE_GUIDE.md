@@ -1,10 +1,10 @@
-# Sush Core Node Guide
+# sushCore Node Guide
 
 *How to run a server node and help the network*
 
 ## Should You Run a Node?
 
-Running a Sush Core node helps people get around censorship. But there are things to consider:
+Running a sushCore node helps people get around censorship. But there are things to consider:
 
 ### Legal Stuff (Important!)
 - **Check your laws** - proxy services aren't legal everywhere
@@ -62,7 +62,7 @@ sudo yum install python3 python3-pip git
 # Download Git from git-scm.com
 ```
 
-### 2. Download and Install Sush Core
+### 2. Download and Install sushCore
 
 ```bash
 git clone https://github.com/soroushdeimi/sush-core.git
@@ -146,7 +146,7 @@ abuse_url = https://yourdomain.com/abuse
 
 ### Linux (iptables)
 ```bash
-# Allow Sush Core port
+# Allow sushCore port
 sudo iptables -A INPUT -p tcp --dport 9090 -j ACCEPT
 
 # For exit nodes, allow outbound traffic
@@ -156,7 +156,7 @@ sudo iptables -A OUTPUT -j ACCEPT
 ### Windows Firewall
 ```powershell
 # Allow inbound on port 9090
-New-NetFirewallRule -DisplayName "Sush Core" -Direction Inbound -Port 9090 -Protocol TCP -Action Allow
+New-NetFirewallRule -DisplayName "sushCore" -Direction Inbound -Port 9090 -Protocol TCP -Action Allow
 ```
 
 ## Running the Server
@@ -171,7 +171,7 @@ python sush_cli.py server --config config/server.conf
 1. **Create service file** (`/etc/systemd/system/sush-core.service`):
 ```ini
 [Unit]
-Description=Sush Core Server
+Description=sushCore Server
 After=network.target
 
 [Service]
@@ -197,11 +197,11 @@ sudo systemctl status sush-core
 
 Use NSSM (Non-Sucking Service Manager):
 ```cmd
-nssm install SushCore
-nssm set SushCore Application C:\Python39\python.exe
-nssm set SushCore AppParameters "sush_cli.py server --config config\server.conf"
-nssm set SushCore AppDirectory C:\SushCore
-nssm start SushCore
+nssm install sushCore
+nssm set sushCore Application C:\Python39\python.exe
+nssm set sushCore AppParameters "sush_cli.py server --config config\server.conf"
+nssm set sushCore AppDirectory C:\sushCore
+nssm start sushCore
 ```
 
 ## Monitoring and Maintenance
@@ -228,7 +228,7 @@ netstat -tulpn | grep 9090
 df -h
 ```
 
-### Update Sush Core
+### Update sushCore
 ```bash
 git pull origin main
 pip3 install -r requirements.txt --upgrade
@@ -238,7 +238,7 @@ sudo systemctl restart sush-core
 ## Security Best Practices
 
 ### Server Hardening
-- **Use dedicated user account** for Sush Core
+- **Use dedicated user account** for sushCore
 - **Keep system updated** with security patches  
 - **Use strong passwords** and key-based SSH
 - **Enable fail2ban** to prevent brute force attacks
@@ -314,6 +314,6 @@ sudo kill -9 <PID>
 
 ---
 
-**Running a Sush Core node helps protect digital rights worldwide. Thank you for your contribution to internet freedom!**
+**Running a sushCore node helps protect digital rights worldwide. Thank you for your contribution to internet freedom!**
 
 *Questions? Join our node operator community or open an issue on GitHub.*

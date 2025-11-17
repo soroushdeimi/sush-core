@@ -1,10 +1,10 @@
-# Sush Core User Guide
+# sushCore User Guide
 
-*How to set up and use Sush Core for private internet access*
+*How to set up and use sushCore for private internet access*
 
 ## What's This Thing?
 
-Sush Core is a proxy that helps you browse privately, especially if your internet is censored or monitored. Think of it as a smart tunnel that disguises your traffic and routes it through multiple servers.
+sushCore is a proxy that helps you browse privately, especially if your internet is censored or monitored. Think of it as a smart tunnel that disguises your traffic and routes it through multiple servers.
 
 ## Getting It Running
 
@@ -12,7 +12,7 @@ Sush Core is a proxy that helps you browse privately, especially if your interne
 1. Grab Python 3.9+ from [python.org](https://python.org)
 2. When installing, check "Add Python to PATH"
 
-### Get Sush Core
+### Get sushCore
 ```bash
 git clone https://github.com/soroushdeimi/sush-core.git
 cd sush-core
@@ -47,7 +47,7 @@ pip install -r requirements.txt
    - Set SOCKS5 proxy to `127.0.0.1:8080`
    - Done
 
-Your traffic now goes through Sush Core.
+Your traffic now goes through sushCore.
 
 ## Browser Configuration
 
@@ -106,7 +106,7 @@ pip install kyber-py
 - Check your internet connection
 
 ### Browser can't connect
-- Make sure Sush Core client is running
+- Make sure sushCore client is running
 - Check proxy settings in browser
 - Try restarting the client
 
@@ -157,7 +157,7 @@ python sush_cli.py client --config config\travel.conf
 
 ## Safety and Legal Notice
 
-- Sush Core is for legitimate privacy protection
+- sushCore is for legitimate privacy protection
 - Respect local laws and regulations
 - Don't use for illegal activities
 - Use responsibly and ethically
