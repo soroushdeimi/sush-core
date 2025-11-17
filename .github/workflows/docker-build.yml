@@ -1,0 +1,41 @@
+name: sushCore Docker Build
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - "Dockerfile"
+      - "sush/**"
+      - "setup.py"
+      - "requirements.txt"
+  workflow_dispatch:
+
+jobs:
+  build-and-test-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: sushcore:test
+
+      - name: Run unit tests inside container
+        run: |
+          docker run --rm sushcore:test python tests/test_smoke.py
+          docker run --rm sushcore:test python run_tests.py
+
+
+

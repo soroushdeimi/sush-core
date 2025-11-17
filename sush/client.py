@@ -1,9 +1,7 @@
 """SpectralFlow client implementation."""
 
-import asyncio
 import logging
 import time
-import json
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass
 import secrets
@@ -413,7 +411,7 @@ class SpectralFlowClient:
             'network_status': self.mirror_network.get_network_status(),
             'transport_status': self.adaptive_transport.get_status(),
             'security_status': {
-                'obfuscation_level': self.quantum_obfuscator.current_obfuscation_level,
+                'obfuscation_level': self.quantum_obfuscator.current_obfuscation_level.name,
                 'current_threat_level': self.censorship_detector.current_threat_level.name,
                 'steganography_enabled': self.config.enable_steganography,
                 'traffic_morphing_enabled': self.config.enable_traffic_morphing

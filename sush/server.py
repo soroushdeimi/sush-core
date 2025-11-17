@@ -1,4 +1,4 @@
-"""SpectralFlow server implementation."""
+"""sushCore server implementation."""
 
 import asyncio
 import logging
@@ -7,7 +7,6 @@ import json
 from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass
 import secrets
-import socket
 
 from .core.quantum_obfuscator import QuantumObfuscator
 from .transport.adaptive_transport import AdaptiveTransport
@@ -22,7 +21,7 @@ from .control.response_engine import ResponseEngine
 
 @dataclass
 class ServerConfig:
-    """Configuration for SpectralFlow server."""
+    """Configuration for sushCore server."""
     # Server identity
     node_id: Optional[str] = None
     private_key: Optional[bytes] = None
@@ -74,7 +73,7 @@ class ConnectionHandler:
     """Handles individual client connections."""
     
     def __init__(self, 
-                 server: 'SpectralFlowServer',
+                 server: 'SushServer',
                  reader: asyncio.StreamReader,
                  writer: asyncio.StreamWriter,
                  client_address: str):
@@ -267,17 +266,17 @@ class ConnectionHandler:
             self.logger.error(f"Cleanup error: {e}")
 
 
-class SpectralFlowServer:
+class SushServer:
     """
-    SpectralFlow Server - Provides mirror node and relay functionality.
+    sushCore Server - Provides mirror node and relay functionality.
     
-    Acts as a node in the SpectralFlow network, providing routing, relaying,
+    Acts as a node in the sushCore network, providing routing, relaying,
     and bridging services for censorship circumvention.
     """
     
     def __init__(self, config: Optional[ServerConfig] = None):
         """
-        Initialize SpectralFlow server.
+        Initialize sushCore server.
         
         Args:
             config: Server configuration (uses defaults if None)
@@ -291,7 +290,7 @@ class SpectralFlowServer:
         # Component initialization
         self.quantum_obfuscator = QuantumObfuscator()
         self.adaptive_transport = AdaptiveTransport()
-        self.mirror_network = MirrorNetworkCoordinator(
+        self.mirror_network = MirrorNetwork(
             node_id=self.config.node_id,
             private_key=self.config.private_key
         )
@@ -328,7 +327,7 @@ class SpectralFlowServer:
             'blocked_connections': 0
         }
         
-        self.logger.info(f"SpectralFlow server initialized: {self.config.node_id}")
+        self.logger.info(f"sushCore server initialized: {self.config.node_id}")
     
     def _setup_logging(self):
         """Setup logging configuration."""
@@ -341,13 +340,13 @@ class SpectralFlowServer:
         )
     
     async def start(self):
-        """Start the SpectralFlow server."""
+        """Start the sushCore server."""
         if self.is_running:
             self.logger.warning("Server already running")
             return
         
         try:
-            self.logger.info("Starting SpectralFlow server...")
+            self.logger.info("Starting sushCore server...")
             self.start_time = time.time()
             
             # Initialize components
@@ -364,7 +363,7 @@ class SpectralFlowServer:
                 await self._join_mirror_network()
             
             self.is_running = True
-            self.logger.info(f"SpectralFlow server started on ports {self.config.listen_ports}")
+            self.logger.info(f"sushCore server started on ports {self.config.listen_ports}")
             
         except Exception as e:
             self.logger.error(f"Failed to start server: {e}")
@@ -372,11 +371,11 @@ class SpectralFlowServer:
             raise
     
     async def stop(self):
-        """Stop the SpectralFlow server."""
+        """Stop the sushCore server."""
         if not self.is_running:
             return
         
-        self.logger.info("Stopping SpectralFlow server...")
+        self.logger.info("Stopping sushCore server...")
         
         try:
             # Close all connections
@@ -391,7 +390,7 @@ class SpectralFlowServer:
             await self._stop_components()
             
             self.is_running = False
-            self.logger.info("SpectralFlow server stopped")
+            self.logger.info("sushCore server stopped")
             
         except Exception as e:
             self.logger.error(f"Error stopping server: {e}")
@@ -618,8 +617,8 @@ class SpectralFlowServer:
 
 # Convenience function for quick server startup
 async def run_server(config: Optional[ServerConfig] = None):
-    """Run a SpectralFlow server with the given configuration."""
-    server = SpectralFlowServer(config)
+    """Run a sushCore server with the given configuration."""
+    server = SushServer(config)
     
     try:
         await server.start()

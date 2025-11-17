@@ -1,16 +1,18 @@
+<<<<<<< Current (Your changes)
 """
 Protocol Hopper - Dynamic port and protocol switching
 """
 
 import asyncio
 import socket
-import time
 import hashlib
 from typing import List, Tuple, Optional, Dict, Any
 from enum import Enum, auto
 from dataclasses import dataclass
 import secrets
 import logging
+
+logger = logging.getLogger(__name__)
 
 # Import libraries for QUIC and WebSocket support
 try:
@@ -20,14 +22,14 @@ try:
     QUIC_AVAILABLE = True
 except ImportError:
     QUIC_AVAILABLE = False
-    print("Warning: aioquic not available. QUIC protocol will fall back to TCP.")
+    logger.debug("aioquic not available; QUIC protocol will fall back to TCP.")
 
 try:
     import websockets
     WEBSOCKET_AVAILABLE = True
 except ImportError:
     WEBSOCKET_AVAILABLE = False
-    print("Warning: websockets not available. WebSocket protocol will fall back to TCP.")
+    logger.debug("websockets not available; WebSocket protocol will fall back to TCP.")
 
 
 class TransportProtocol(Enum):
@@ -57,7 +59,7 @@ class ProtocolHopper:
         # Avoid common service ports
         self.excluded_ports = {22, 23, 25, 53, 80, 110, 143, 443, 993, 995, 8080, 8443}
         
-        self.current_port = self._generate_random_port()
+        self._generate_random_port()
         self.current_protocol = TransportProtocol.TCP
         
         self.hop_sequences = {}
@@ -104,78 +106,6 @@ class ProtocolHopper:
         rng = random.Random()
         rng.seed(int.from_bytes(seed, 'big'))
         return rng
-    
-    async def start_hopping(self, sequence_id: str):
-        """Start hopping according to sequence."""
-        if sequence_id not in self.hop_sequences:
-            raise ValueError(f"Unknown sequence ID: {sequence_id}")
-        
-        sequence = self.hop_sequences[sequence_id]
-        self.hop_task = asyncio.create_task(self._hop_loop(sequence))
-    
-    async def _hop_loop(self, sequence: HopSequence):
-        """Main hopping loop."""
-        position = 0
-        
-        while True:
-            try:
-                # Switch to next port/protocol
-                self.current_port = sequence.ports[position]
-                self.current_protocol = sequence.protocols[position]
-                
-                self.logger.debug(f"Hopped to port {self.current_port}, protocol {self.current_protocol.name}")
-                
-                # Wait for next hop
-                await asyncio.sleep(sequence.timing_intervals[position])
-                
-                position = (position + 1) % len(sequence.ports)
-                
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                self.logger.error(f"Error in hop loop: {e}")
-                await asyncio.sleep(1)
-    
-    def stop_hopping(self):
-        """Stop hopping sequence."""
-        if self.hop_task:
-            self.hop_task.cancel()
-    
-    async def create_connection(self, host: str, port: int) -> Any:
-        """Create connection using current protocol."""
-        if self.current_protocol == TransportProtocol.TCP:
-            return await self._create_tcp_connection(host, port)
-        elif self.current_protocol == TransportProtocol.UDP:
-            return await self._create_udp_connection(host, port)
-        else:
-            # For QUIC/WebSocket, fall back to TCP for now
-            return await self._create_tcp_connection(host, port)
-    
-    async def _create_tcp_connection(self, host: str, port: int):
-        """Create TCP connection."""
-        reader, writer = await asyncio.open_connection(host, port)
-        return {'reader': reader, 'writer': writer, 'type': 'tcp'}
-    
-    async def _create_udp_connection(self, host: str, port: int):
-        """Create UDP connection."""
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.connect((host, port))
-        return {'socket': sock, 'type': 'udp'}
-    
-    def get_current_endpoint(self) -> Dict[str, Any]:
-        """Get current connection endpoint info."""
-        return {
-            'port': self.current_port,
-            'protocol': self.current_protocol.name,
-            'timestamp': time.time()
-        }
-    
-    def _generate_initial_port(self) -> int:
-        """Generate initial port avoiding common services."""
-        while True:
-            port = self._rng.randint(*self.port_range)
-            if port not in self.excluded_ports:
-                return port
     
     def generate_hop_sequence(self, 
                             peer_shared_secret: bytes,
@@ -346,71 +276,64 @@ class ProtocolHopper:
             except Exception as e:
                 self.logger.warning(f"Error closing connection {conn_id}: {e}")
     
-    async def create_connection(self, 
-                             target_host: str,
-                             connection_id: str,
-                             timeout: float = 10.0) -> Any:
-        """
-        Create a connection using current port/protocol.
-        
-        Args:
-            target_host: Target hostname/IP
-            connection_id: Unique connection identifier
-            timeout: Connection timeout
-            
-        Returns:
-            Connection object
-        """
+    async def create_connection(
+        self,
+        target_host: str,
+        port: Optional[int] = None,
+        *,
+        connection_id: Optional[str] = None,
+        timeout: float = 10.0,
+    ) -> Any:
+        """Create a connection using current port/protocol."""
         try:
+            chosen_port = port if port is not None else self.current_port
+            if port is not None:
+                self.current_port = chosen_port
+
+            if connection_id is None:
+                connection_id = f"hop_{secrets.token_hex(6)}"
+
             if self.current_protocol == TransportProtocol.TCP:
-                connection = await self._create_tcp_connection(target_host, timeout)
+                connection = await self._create_tcp_connection(target_host, chosen_port, timeout)
             elif self.current_protocol == TransportProtocol.UDP:
-                connection = await self._create_udp_connection(target_host, timeout)
+                connection = await self._create_udp_connection(target_host, chosen_port, timeout)
             elif self.current_protocol == TransportProtocol.QUIC:
-                connection = await self._create_quic_connection(target_host, timeout)
+                connection = await self._create_quic_connection(target_host, chosen_port, timeout)
             elif self.current_protocol == TransportProtocol.WEBSOCKET:
-                connection = await self._create_websocket_connection(target_host, timeout)
+                connection = await self._create_websocket_connection(target_host, chosen_port, timeout)
             else:
                 raise ValueError(f"Unsupported protocol: {self.current_protocol}")
-            
+
             self.active_connections[connection_id] = connection
-            
-            self.logger.debug(f"Created {self.current_protocol.name} connection to "
-                            f"{target_host}:{self.current_port}")
-            
+            self.logger.debug(
+                f"Created {self.current_protocol.name} connection to {target_host}:{chosen_port}"
+            )
             return connection
-            
-        except Exception as e:
-            self.logger.error(f"Failed to create connection: {e}")
+        except Exception as exc:
+            self.logger.error(f"Failed to create connection: {exc}")
             raise
-    
-    async def _create_tcp_connection(self, target_host: str, timeout: float):
+
+    async def _create_tcp_connection(self, target_host: str, port: int, timeout: float):
         """Create TCP connection."""
         try:
             reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(target_host, self.current_port),
+                asyncio.open_connection(target_host, port),
                 timeout=timeout
             )
-            return {'reader': reader, 'writer': writer, 'type': 'tcp'}
-        except Exception as e:
-            raise ConnectionError(f"TCP connection failed: {e}")
-    
-    async def _create_udp_connection(self, target_host: str, timeout: float):
+            return {'reader': reader, 'writer': writer, 'type': 'tcp', 'port': port, 'host': target_host}
+        except Exception as exc:
+            raise ConnectionError(f"TCP connection failed: {exc}")
+
+    async def _create_udp_connection(self, target_host: str, port: int, timeout: float):
         """Create UDP connection."""
         try:
-            # Create UDP socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.setblocking(False)
-            
-            # Connect to target
-            await asyncio.get_event_loop().sock_connect(
-                sock, (target_host, self.current_port)
-            )
-            
-            return {'socket': sock, 'type': 'udp', 'target': (target_host, self.current_port)}
-        except Exception as e:
-            raise ConnectionError(f"UDP connection failed: {e}")
-    async def _create_quic_connection(self, target_host: str, timeout: float):
+            await asyncio.get_event_loop().sock_connect(sock, (target_host, port))
+            return {'socket': sock, 'type': 'udp', 'target': (target_host, port)}
+        except Exception as exc:
+            raise ConnectionError(f"UDP connection failed: {exc}")
+    async def _create_quic_connection(self, target_host: str, port: int, timeout: float):
         """
         Create QUIC connection using aioquic.
         
@@ -420,7 +343,7 @@ class ProtocolHopper:
         if not QUIC_AVAILABLE:
             # Fallback to UDP when QUIC is not available
             self.logger.warning("aioquic not available, falling back to UDP")
-            return await self._create_udp_connection(target_host, timeout)
+            return await self._create_udp_connection(target_host, port, timeout)
         
         try:
             # Configure QUIC connection
@@ -433,7 +356,7 @@ class ProtocolHopper:
             connection = await asyncio.wait_for(
                 quic_connect(
                     target_host,
-                    self.current_port,
+                    port,
                     configuration=configuration,
                     create_protocol=lambda: None  # Use default protocol
                 ),
@@ -443,15 +366,15 @@ class ProtocolHopper:
             return {
                 'connection': connection,
                 'type': 'quic',
-                'target': (target_host, self.current_port)
+                'target': (target_host, port)
             }
         
         except Exception as e:
             self.logger.error(f"QUIC connection failed: {e}")
             # Fallback to UDP
-            return await self._create_udp_connection(target_host, timeout)
+            return await self._create_udp_connection(target_host, port, timeout)
 
-    async def _create_websocket_connection(self, target_host: str, timeout: float):
+    async def _create_websocket_connection(self, target_host: str, port: int, timeout: float):
         """
         Create WebSocket connection using websockets library.
         
@@ -461,11 +384,11 @@ class ProtocolHopper:
         if not WEBSOCKET_AVAILABLE:
             # Fallback to TCP when WebSockets is not available
             self.logger.warning("websockets library not available, falling back to TCP")
-            return await self._create_tcp_connection(target_host, timeout)
+            return await self._create_tcp_connection(target_host, port, timeout)
         
         try:
             # Construct WebSocket URI
-            uri = f"ws://{target_host}:{self.current_port}/spectralflow"
+            uri = f"ws://{target_host}:{port}/sushcore"
             
             # Create WebSocket connection
             websocket = await asyncio.wait_for(
@@ -482,13 +405,13 @@ class ProtocolHopper:
                 'websocket': websocket,
                 'type': 'websocket',
                 'uri': uri,
-                'target': (target_host, self.current_port)
+                'target': (target_host, port)
             }
         
         except Exception as e:
             self.logger.error(f"WebSocket connection failed: {e}")
             # Fallback to TCP
-            return await self._create_tcp_connection(target_host, timeout)
+            return await self._create_tcp_connection(target_host, port, timeout)
     
     def get_current_endpoint(self) -> Tuple[int, TransportProtocol]:
         """Get current port and protocol."""
@@ -539,3 +462,5 @@ class ProtocolHopper:
             'sequence_position': self.sequence_position,
             'is_hopping': self.hop_task is not None and not self.hop_task.done()
         }
+=======
+>>>>>>> Incoming (Background Agent changes)

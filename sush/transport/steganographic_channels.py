@@ -6,17 +6,22 @@ import struct
 import time
 import socket
 import asyncio
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 from abc import ABC, abstractmethod
-import secrets
+import logging
 
 # Import scapy for raw packet manipulation
 try:
-    from scapy.all import IP, UDP, Raw, sr1, send
+    from scapy.all import IP, UDP, Raw, send
     SCAPY_AVAILABLE = True
 except ImportError:
     SCAPY_AVAILABLE = False
-    print("Warning: Scapy not available. TTL channel will have limited functionality.")
+
+
+logger = logging.getLogger(__name__)
+
+if not SCAPY_AVAILABLE:
+    logger.debug("Scapy not available; TTL channel will fall back to limited functionality.")
 
 
 class SteganographicChannel(ABC):
@@ -139,13 +144,13 @@ class TTLChannel(SteganographicChannel):
                     send(packet, verbose=0)
                     await asyncio.sleep(0.1)  # Small delay between packets
                 except Exception as e:
-                    print(f"Warning: Could not send raw packet: {e}")
+                    logger.debug("Could not send raw packet: %s", e)
                     return False
             
             return True
             
         except Exception as e:
-            print(f"Error in TTL channel send: {e}")
+            logger.error("Error in TTL channel send: %s", e)
             return False
     
     async def _send_data_fallback(self, data: bytes, target: str) -> bool:
@@ -172,7 +177,7 @@ class TTLChannel(SteganographicChannel):
             return True
             
         except Exception as e:
-            print(f"Error in TTL fallback send: {e}")
+            logger.error("Error in TTL fallback send: %s", e)
             return False
 
     async def receive_data(self) -> Optional[bytes]:

@@ -1,6 +1,7 @@
 """Censorship detection using ML models and statistical analysis."""
 
 import asyncio
+import contextlib
 import time
 import logging
 from typing import Dict, List, Optional, Tuple, Any
@@ -15,7 +16,6 @@ from sklearn.ensemble import IsolationForest
 from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-import joblib
 
 
 class ThreatLevel(Enum):
@@ -111,9 +111,13 @@ class CensorshipDetector:
         self.feature_buffer: deque = deque(maxlen=50)  # For batch ML inference
         
         self.logger = logging.getLogger(__name__)
+        self._tasks: List[asyncio.Task] = []
     
     async def start_monitoring(self):
         """Start continuous censorship monitoring."""
+        if self.is_monitoring:
+            return
+
         self.is_monitoring = True
         self.logger.info("Starting censorship detection monitoring")
         
@@ -123,16 +127,23 @@ class CensorshipDetector:
             await self.train_ml_models()
         
         # Start monitoring tasks
-        await asyncio.gather(
-            self._monitor_connections(),
-            self._analyze_patterns(),
-            self._update_baselines(),
-            self._ml_batch_analysis()  # New ML batch analysis task
-        )
+        self._tasks = [
+            asyncio.create_task(self._monitor_connections()),
+            asyncio.create_task(self._analyze_patterns()),
+            asyncio.create_task(self._update_baselines()),
+            asyncio.create_task(self._ml_batch_analysis()),
+        ]
+        self.logger.debug("Censorship detector background tasks scheduled")
+
     async def stop_monitoring(self):
         """Stop censorship monitoring."""
         self.is_monitoring = False
         self.logger.info("Stopping censorship detection monitoring")
+        for task in self._tasks:
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+        self._tasks.clear()
     
     async def record_metrics(self, metrics: NetworkMetrics):
         """Record network metrics for analysis."""
@@ -418,7 +429,7 @@ class CensorshipDetector:
             scaled_features = self.feature_scaler.transform(features_array)
             
             # Batch anomaly detection
-            anomaly_scores = self.anomaly_detector.decision_function(scaled_features)
+            self.anomaly_detector.decision_function(scaled_features)
             anomaly_predictions = self.anomaly_detector.predict(scaled_features)
             
             # Count anomalies in the batch

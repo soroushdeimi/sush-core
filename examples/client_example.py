@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-Sushcore Client Example
+sushCore Client Example
 
-Demonstrates how to use the SpectralFlow client for censorship circumvention.
+Demonstrates how to use the sushCore client for censorship circumvention.
 """
 
 import asyncio
 import logging
 import sys
 import argparse
-from spectralflow.client import SpectralFlowClient, ClientConfig
+from sush.client import SushClient, ClientConfig
 
 
 async def simple_connection_example():
-    """Simple example of creating a connection through SpectralFlow."""
+    """Simple example of creating a connection through sushCore."""
     print("=== Simple Connection Example ===")
     
     # Create client configuration
@@ -24,7 +24,7 @@ async def simple_connection_example():
     )
     
     # Create and start client
-    async with SpectralFlowClient(config) as client:
+    async with SushClient(config) as client:
         print(f"Client started with node ID: {client.config.node_id}")
         
         # Connect to a target
@@ -69,7 +69,7 @@ async def multi_connection_example():
         obfuscation_level=0.6
     )
     
-    async with SpectralFlowClient(config) as client:
+    async with SushClient(config) as client:
         connections = []
         
         # Create multiple connections
@@ -109,7 +109,7 @@ async def adaptive_behavior_example():
         enable_traffic_morphing=True
     )
     
-    async with SpectralFlowClient(config) as client:
+    async with SushClient(config) as client:
         print("Monitoring system adaptation...")
         
         # Monitor status for 30 seconds
@@ -146,7 +146,7 @@ async def status_monitoring_example():
     
     config = ClientConfig(log_level="DEBUG")
     
-    async with SpectralFlowClient(config) as client:
+    async with SushClient(config) as client:
         # Get comprehensive status
         status = client.get_status()
         
@@ -178,7 +178,7 @@ async def status_monitoring_example():
 
 async def main():
     """Main function to run examples."""
-    parser = argparse.ArgumentParser(description="SpectralFlow Client Examples")
+    parser = argparse.ArgumentParser(description="sushCore client examples")
     parser.add_argument(
         "--example", 
         choices=["simple", "multi", "adaptive", "status", "all"],
@@ -194,7 +194,7 @@ async def main():
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
-    print("SpectralFlow Client Examples")
+    print("sushCore client examples")
     print("============================")
     
     try:

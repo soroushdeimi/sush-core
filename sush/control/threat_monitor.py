@@ -1,10 +1,11 @@
 """Network threat monitoring system."""
 
 import asyncio
+import contextlib
 import time
 import socket
 import random
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, field
 from enum import Enum, auto
 import dns.resolver
@@ -90,9 +91,13 @@ class ThreatMonitor:
         self.suspicious_ips: Set[str] = set()
         
         self.logger = logging.getLogger(__name__)
+        self._tasks: List[asyncio.Task] = []
     
     async def start_monitoring(self):
         """Start threat monitoring."""
+        if self.is_monitoring:
+            return
+
         self.is_monitoring = True
         self.logger.info("Starting threat monitoring")
         
@@ -100,16 +105,21 @@ class ThreatMonitor:
         await self._initialize_probe_targets()
         
         # Start monitoring tasks
-        await asyncio.gather(
-            self._continuous_probing(),
-            self._dns_monitoring(),
-            self._infrastructure_detection()
-        )
+        self._tasks = [
+            asyncio.create_task(self._continuous_probing()),
+            asyncio.create_task(self._dns_monitoring()),
+            asyncio.create_task(self._infrastructure_detection()),
+        ]
     
     async def stop_monitoring(self):
         """Stop threat monitoring."""
         self.is_monitoring = False
         self.logger.info("Stopping threat monitoring")
+        for task in self._tasks:
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+        self._tasks.clear()
     
     async def _initialize_probe_targets(self):
         """Initialize default probe targets."""

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Sush Core Command Line Interface
+sushCore Command Line Interface
 
-Simple CLI for running Sush Core client operations.
+Simple CLI for running sushCore client operations.
 """
 
 import asyncio
@@ -11,15 +11,15 @@ import sys
 import logging
 from pathlib import Path
 
-from spectralflow.client import SpectralFlowClient, ClientConfig
+from sush.client import SushClient, ClientConfig
 
 
 async def run_client_interactive():
     """Run client in interactive mode."""
     config = ClientConfig(log_level="INFO")
     
-    async with SpectralFlowClient(config) as client:
-        print(f"Sush Core Client Started (Node ID: {client.config.node_id})")
+    async with SushClient(config) as client:
+        print(f"sushCore Client Started (Node ID: {client.config.node_id})")
         print("Type 'help' for available commands")
         
         while True:
@@ -157,13 +157,13 @@ async def adapt_command(client, strategy):
 async def run_proxy_mode(local_port, remote_host, remote_port):
     """Run client in proxy mode."""
     config = ClientConfig(log_level="WARNING")
-    async with SpectralFlowClient(config) as client:
-        print(f"Sush Core Proxy: localhost:{local_port} -> {remote_host}:{remote_port}")
+    async with SushClient(config) as client:
+        print(f"sushCore Proxy: localhost:{local_port} -> {remote_host}:{remote_port}")
         
         async def handle_proxy_connection(reader, writer):
             """Handle incoming proxy connection."""
             try:
-                # Connect through Sush Core
+                # Connect through sushCore
                 connection_id = await client.connect(remote_host, remote_port, "tcp")
                 
                 # Relay data bidirectionally
@@ -213,7 +213,7 @@ async def run_proxy_mode(local_port, remote_host, remote_port):
 
 def main():
     """Main CLI function."""
-    parser = argparse.ArgumentParser(description="Sush Core CLI")
+    parser = argparse.ArgumentParser(description="sushCore CLI")
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
     # Interactive mode
@@ -262,7 +262,7 @@ async def quick_connect(host, port, data=None):
     """Quick connect to a target."""
     config = ClientConfig(log_level="INFO")
     
-    async with SpectralFlowClient(config) as client:
+    async with SushClient(config) as client:
         try:
             connection_id = await client.connect(host, port, "tcp")
             print(f"Connected to {host}:{port}")

@@ -4,11 +4,11 @@ Adaptive Transport - Coordinate transport layer components
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, Optional, Any
 from enum import Enum, auto
 from dataclasses import dataclass
 
-from .protocol_hopper import ProtocolHopper, TransportProtocol
+from .protocol_hopper import ProtocolHopper
 from .steganographic_channels import ChannelManager
 from .metadata_channels import MetadataChannels
 
@@ -22,12 +22,18 @@ class TransportMode(Enum):
 
 @dataclass
 class TransportConfig:
-    """Transport layer configuration."""
+    """Configuration knobs for the adaptive transport layer."""
+
     mode: TransportMode = TransportMode.DIRECT
     enable_hopping: bool = True
     hop_interval: float = 30.0
-    steganographic_channel: str = 'ntp'
-    metadata_channel: str = 'ttl'
+    steganographic_channel: str = "ntp"
+    metadata_channel: str = "ttl"
+    connection_timeout: float = 10.0
+
+    # Behavioural flags used by the control loop
+    enable_steganography: bool = True
+    enable_traffic_morphing: bool = True
 
 
 class AdaptiveTransport:
@@ -42,25 +48,103 @@ class AdaptiveTransport:
         self.stego_channels = ChannelManager()
         self.metadata_channels = MetadataChannels()
         
-        # State
-        self.active_connections = {}
+        # Runtime state
+        self.active_connections: Dict[str, Dict[str, Any]] = {}
+        self._aggressiveness = 0.5
+        self._steganography_enabled = self.config.enable_steganography
+        self._traffic_signature_minimized = False
+        self._redundancy_enabled = False
+
         self.transport_stats = {
-            'packets_sent': 0,
-            'packets_received': 0,
-            'hops_completed': 0,
-            'steganographic_bytes': 0
+            "packets_sent": 0,
+            "packets_received": 0,
+            "hops_completed": 0,
+            "steganographic_bytes": 0,
         }
+<<<<<<< Current (Your changes)
+        self._aggressiveness = 0.5
+        self._steganography_enabled = True
+        self._connection_timeout = 30.0
+
+    def configure(self, options: Dict[str, Any]) -> None:
+        """Apply runtime configuration options."""
+        if not options:
+            return
+
+        for key, value in options.items():
+            if key == 'mode':
+                if isinstance(value, TransportMode):
+                    self.config.mode = value
+                elif isinstance(value, str):
+                    try:
+                        self.config.mode = TransportMode[value.upper()]
+                    except KeyError:
+                        self.logger.warning(f"Unknown transport mode: {value}")
+            elif key == 'enable_hopping':
+                self.config.enable_hopping = bool(value)
+            elif key == 'hop_interval':
+                try:
+                    self.config.hop_interval = float(value)
+                except (TypeError, ValueError):
+                    self.logger.warning(f"Invalid hop interval: {value}")
+            elif key == 'steganographic_channel':
+                self.config.steganographic_channel = str(value)
+            elif key == 'metadata_channel':
+                self.config.metadata_channel = str(value)
+            elif key == 'enable_steganography':
+                self._steganography_enabled = bool(value)
+            elif key == 'connection_timeout':
+                try:
+                    self._connection_timeout = float(value)
+                except (TypeError, ValueError):
+                    self.logger.warning(f"Invalid connection timeout: {value}")
+            else:
+                self.logger.debug(f"Ignoring unknown transport option: {key}")
+
+=======
+
+    async def configure(self, options: Dict[str, Any]) -> None:
+        """
+        Apply configuration coming from the higher layers.
+
+        We keep the method async because the surrounding code awaits it.  The
+        body runs synchronously but returning an awaitable keeps the API stable.
+        """
+        for key, value in options.items():
+            if hasattr(self.config, key):
+                setattr(self.config, key, value)
+
+        if "enable_steganography" in options:
+            self._steganography_enabled = bool(options["enable_steganography"])
+        if "enable_traffic_morphing" in options:
+            # Currently traffic morphing is handled in the obfuscator; we simply
+            # remember the flag so status reporting stays consistent.
+            self._traffic_signature_minimized = not bool(
+                options["enable_traffic_morphing"]
+            )
+
+        self.logger.debug("Adaptive transport configured with %s", options)
     
+>>>>>>> Incoming (Background Agent changes)
     async def establish_connection(self, target: str) -> str:
         """Establish connection using current transport mode."""
         connection_id = f"conn_{len(self.active_connections)}"
         
         try:
-            if self.config.mode == TransportMode.DIRECT:
+            mode = self.config.mode
+            if mode == TransportMode.STEGANOGRAPHIC and not self._steganography_enabled:
+                self.logger.warning(
+                    "Steganography disabled, falling back to DIRECT transport"
+                )
+                mode = TransportMode.DIRECT
+            if mode == TransportMode.HYBRID and not self._steganography_enabled:
+                mode = TransportMode.DIRECT
+
+            if mode == TransportMode.DIRECT:
                 connection = await self._establish_direct_connection(target)
-            elif self.config.mode == TransportMode.STEGANOGRAPHIC:
+            elif mode == TransportMode.STEGANOGRAPHIC:
                 connection = await self._establish_steganographic_connection(target)
-            elif self.config.mode == TransportMode.METADATA:
+            elif mode == TransportMode.METADATA:
                 connection = await self._establish_metadata_connection(target)
             else:  # HYBRID
                 connection = await self._establish_hybrid_connection(target)
@@ -68,7 +152,7 @@ class AdaptiveTransport:
             self.active_connections[connection_id] = {
                 'connection': connection,
                 'target': target,
-                'mode': self.config.mode,
+                'mode': mode,
                 'created_at': asyncio.get_event_loop().time()
             }
             
@@ -84,20 +168,17 @@ class AdaptiveTransport:
         if self.config.enable_hopping:
             # Create hopping sequence
             sequence_id = f"seq_{target}"
-            sequence = self.protocol_hopper.create_hop_sequence(sequence_id)
+            self.protocol_hopper.create_hop_sequence(sequence_id)
             await self.protocol_hopper.start_hopping(sequence_id)
+            self.transport_stats['hops_completed'] += len(sequence.ports)
         
         # Create connection using current protocol/port
-        connection = await self.protocol_hopper.create_connection(
+        resource = await self.protocol_hopper.create_connection(
             target.split(':')[0],
             int(target.split(':')[1]) if ':' in target else 443
         )
         
-        return {
-            'type': 'direct',
-            'connection': connection,
-            'hopping': self.config.enable_hopping
-        }
+        return resource
     
     async def _establish_steganographic_connection(self, target: str) -> Dict:
         """Establish steganographic connection."""
@@ -147,12 +228,17 @@ class AdaptiveTransport:
             if mode == TransportMode.DIRECT:
                 success = await self._send_direct_data(connection, data)
             elif mode == TransportMode.STEGANOGRAPHIC:
-                success = await self.stego_channels.send_data(data, target)
+                if not self._steganography_enabled:
+                    success = await self._send_direct_data(connection, data)
+                else:
+                    success = await self.stego_channels.send_data(data, target)
             elif mode == TransportMode.METADATA:
                 success = await self.metadata_channels.send_control_signal(data, target)
             else:  # HYBRID
-                # Send via steganographic channel
-                success = await self.stego_channels.send_data(data, target)
+                if not self._steganography_enabled:
+                    success = await self._send_direct_data(connection, data)
+                else:
+                    success = await self.stego_channels.send_data(data, target)
             
             if success:
                 self.transport_stats['packets_sent'] += 1
@@ -168,12 +254,12 @@ class AdaptiveTransport:
     async def _send_direct_data(self, connection: Dict, data: bytes) -> bool:
         """Send data through direct connection."""
         if connection['type'] == 'tcp':
-            writer = connection['connection']['writer']
+            writer = connection['writer']
             writer.write(data)
             await writer.drain()
             return True
         elif connection['type'] == 'udp':
-            sock = connection['connection']['socket']
+            sock = connection['socket']
             sock.send(data)
             return True
         
@@ -192,11 +278,17 @@ class AdaptiveTransport:
             if mode == TransportMode.DIRECT:
                 data = await self._receive_direct_data(connection, timeout)
             elif mode == TransportMode.STEGANOGRAPHIC:
-                data = await self.stego_channels.receive_data()
+                if not self._steganography_enabled:
+                    data = await self._receive_direct_data(connection, timeout)
+                else:
+                    data = await self.stego_channels.receive_data()
             elif mode == TransportMode.METADATA:
                 data = await self.metadata_channels.receive_control_signal(timeout=timeout)
             else:  # HYBRID
-                data = await self.stego_channels.receive_data()
+                if not self._steganography_enabled:
+                    data = await self._receive_direct_data(connection, timeout)
+                else:
+                    data = await self.stego_channels.receive_data()
             
             if data:
                 self.transport_stats['packets_received'] += 1
@@ -210,7 +302,7 @@ class AdaptiveTransport:
     async def _receive_direct_data(self, connection: Dict, timeout: float) -> Optional[bytes]:
         """Receive data from direct connection."""
         if connection['type'] == 'tcp':
-            reader = connection['connection']['reader']
+            reader = connection['reader']
             try:
                 data = await asyncio.wait_for(reader.read(1024), timeout=timeout)
                 return data if data else None
@@ -241,12 +333,55 @@ class AdaptiveTransport:
     async def _close_direct_connection(self, connection: Dict):
         """Close direct connection."""
         if connection['type'] == 'tcp':
-            writer = connection['connection']['writer']
+            writer = connection['writer']
             writer.close()
             await writer.wait_closed()
         elif connection['type'] == 'udp':
-            sock = connection['connection']['socket']
+            sock = connection['socket']
             sock.close()
+
+    async def set_aggressiveness(self, value: float) -> None:
+        """Adjust how aggressive the transport layer should behave."""
+        self._aggressiveness = max(0.0, min(1.0, float(value)))
+        if self._aggressiveness > 0.75:
+            await self.enable_protocol_hopping()
+        self.logger.debug("Transport aggressiveness set to %.2f", self._aggressiveness)
+
+    async def enable_protocol_hopping(self) -> None:
+        """Ensure port/protocol hopping remains active."""
+        self.config.enable_hopping = True
+        self.logger.debug("Protocol hopping enabled")
+
+    async def enable_steganography(self) -> None:
+        """Allow the transport to use steganography-based channels."""
+        self._steganography_enabled = True
+        self.logger.debug("Steganography enabled")
+
+    async def disable_steganography(self) -> None:
+        """Disable steganographic channels (falls back to direct mode)."""
+        self._steganography_enabled = False
+        self.logger.debug("Steganography disabled")
+
+    async def minimize_traffic_signature(self) -> None:
+        """Bias internals towards lower-observable footprints."""
+        self._traffic_signature_minimized = True
+        self.logger.debug("Traffic signature minimisation activated")
+
+    async def enable_redundancy(self) -> None:
+        """Flip redundancy flag used by the control logic."""
+        self._redundancy_enabled = True
+        self.logger.debug("Transport redundancy enabled")
+
+    async def get_performance_metrics(self) -> Dict[str, Any]:
+        """Expose metrics for the adaptive control loop."""
+        return {
+            'mode': self.config.mode.name,
+            'packets_sent': self.transport_stats['packets_sent'],
+            'packets_received': self.transport_stats['packets_received'],
+            'steganography_enabled': self._steganography_enabled,
+            'aggressiveness': self._aggressiveness,
+            'hopping_enabled': self.config.enable_hopping,
+        }
     
     def adapt_to_conditions(self, network_conditions: Dict[str, Any]):
         """Adapt transport strategy based on network conditions."""
@@ -277,5 +412,33 @@ class AdaptiveTransport:
             'channel_info': {
                 'steganographic': self.stego_channels.get_channel_info(),
                 'metadata': self.metadata_channels.get_channel_info()
-            }
+            },
+            'aggressiveness': self._aggressiveness,
+            'steganography_enabled': self._steganography_enabled
+        }
+
+    def get_status(self) -> Dict[str, Any]:
+        """Alias for get_statistics for compatibility."""
+        return self.get_statistics()
+
+    def get_performance_metrics(self) -> Dict[str, float]:
+        """Return lightweight performance metrics for adaptive control."""
+        return {
+            'avg_latency': 0.0,
+            'throughput': 0.0,
+            'success_rate': 1.0,
+            'aggressiveness': self._aggressiveness
+        }
+
+    def get_status(self) -> Dict[str, Any]:
+        """Provide a richer snapshot for user-facing status commands."""
+        return {
+            'mode': self.config.mode.name,
+            'active_connections': len(self.active_connections),
+            'hopping_enabled': self.config.enable_hopping,
+            'steganography_enabled': self._steganography_enabled,
+            'redundancy_enabled': self._redundancy_enabled,
+            'aggressiveness': self._aggressiveness,
+            'traffic_signature_minimized': self._traffic_signature_minimized,
+            'statistics': self.transport_stats.copy(),
         }

@@ -1,19 +1,19 @@
 """Quantum-resistant onion routing implementation."""
 
 import asyncio
+import hashlib
 import logging
 import secrets
+import struct
 import time
-from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 from enum import Enum, auto
-import hashlib
-import struct
+from typing import Any, Dict, List, Optional
 
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 from ..core.ml_kem import MLKEMKeyExchange
 
@@ -386,7 +386,7 @@ class OnionRoutingProtocol:
         to ensure cryptographic security and key separation.
         """
         # Use HKDF for proper key derivation
-        info = f"SpectralFlow-ORPP-{purpose}".encode()
+        info = f"sushCore-ORPP-{purpose}".encode()
         
         hkdf = HKDF(
             algorithm=hashes.SHA256(),
@@ -404,7 +404,7 @@ class OnionRoutingProtocol:
         Use _derive_layer_key_secure for new implementations.
         """
         # Use HKDF-like key derivation
-        info = f"SpectralFlow-ORPP-{purpose}".encode()
+        info = f"sushCore-ORPP-{purpose}".encode()
         combined = shared_secret + info
         return hashlib.sha256(combined).digest()
     
@@ -465,8 +465,6 @@ class OnionRoutingProtocol:
         """Receive data from a circuit."""
         if circuit_id not in self.circuits:
             return None
-        
-        circuit = self.circuits[circuit_id]
         
         try:
             # In real implementation, would listen for incoming cells

@@ -3,6 +3,9 @@
 from typing import Tuple, Dict
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+import logging
+
+logger = logging.getLogger(__name__)
 
 try:
     from kyber_py.kyber768 import Kyber768
@@ -38,7 +41,7 @@ except ImportError:
                 return shared_secret
         
         Kyber768 = MockKyber768
-        print("Warning: Using mock ML-KEM implementation. Install proper kyber-py for production use.")
+        logger.debug("Using mock ML-KEM implementation; install kyber-py for production use.")
 
 
 class MLKEMKeyExchange:
@@ -99,3 +102,30 @@ class MLKEMKeyExchange:
         Alias for derive_keys method for compatibility.
         """
         return self.derive_keys(shared_secret, context)
+<<<<<<< Current (Your changes)
+=======
+
+    def get_parameters(self) -> Dict[str, int]:
+        """
+        Return static parameter information about the underlying ML-KEM suite.
+        
+        The value is kept in a dict so callers can introspect capabilities
+        without depending on the concrete implementation in use.
+        """
+        return {
+            "public_key_size": self.PUBLIC_KEY_SIZE,
+            "ciphertext_size": self.CIPHERTEXT_SIZE,
+            "shared_secret_size": self.SHARED_SECRET_SIZE,
+            "variant": "ML-KEM-768",
+        }
+
+    def get_parameters(self) -> Dict[str, int]:
+        """
+        Return ML-KEM parameter sizes for introspection.
+        """
+        return {
+            "public_key_size": self.PUBLIC_KEY_SIZE,
+            "ciphertext_size": self.CIPHERTEXT_SIZE,
+            "shared_secret_size": self.SHARED_SECRET_SIZE,
+        }
+>>>>>>> Incoming (Background Agent changes)

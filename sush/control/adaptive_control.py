@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field, asdict
 from enum import Enum, auto
 import statistics

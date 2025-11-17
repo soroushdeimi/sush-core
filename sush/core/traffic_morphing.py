@@ -5,9 +5,8 @@ Traffic Morphing Engine - Eliminate statistical fingerprints
 import os
 import time
 import random
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Dict, Any
 from dataclasses import dataclass
-import secrets
 
 
 @dataclass

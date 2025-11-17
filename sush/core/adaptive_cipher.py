@@ -2,16 +2,12 @@
 
 import os
 import time
-import hashlib
-from typing import Dict, List, Optional, Tuple, Any
+from typing import List, Tuple
 from enum import Enum, auto
 from dataclasses import dataclass
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import hashes, hmac
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305, AESGCM
 from cryptography.hazmat.backends import default_backend
-import secrets
 
 
 class ThreatLevel(Enum):
@@ -77,17 +73,17 @@ class AdaptiveCipherSuite:
         profile = self.cipher_profiles[self.active_cipher]
         
         if self.active_cipher == 'aes_gcm':
-            ciphertext, iv = self._encrypt_aes_gcm(data, self.encryption_key, profile)
+            ciphertext, iv = self._encrypt_aes_gcm(data, self.encryption_key, profile, additional_data)
             tag = ciphertext[-16:]
             ciphertext = ciphertext[:-16]
             return ciphertext, iv, tag
         elif self.active_cipher == 'chacha20':
-            ciphertext, nonce = self._encrypt_chacha20(data, self.encryption_key, profile)
+            ciphertext, nonce = self._encrypt_chacha20(data, self.encryption_key, profile, additional_data)
             tag = ciphertext[-16:]
             ciphertext = ciphertext[:-16]
             return ciphertext, nonce, tag
         elif self.active_cipher == 'aes_ocb':
-            ciphertext, nonce = self._encrypt_aes_ocb(data, self.encryption_key, profile)
+            ciphertext, nonce = self._encrypt_aes_ocb(data, self.encryption_key, profile, additional_data)
             tag = ciphertext[-16:]
             ciphertext = ciphertext[:-16]
             return ciphertext, nonce, tag
@@ -101,20 +97,22 @@ class AdaptiveCipherSuite:
         profile = self.cipher_profiles[self.active_cipher]
         
         if self.active_cipher == 'aes_gcm':
-            return self._decrypt_aes_gcm_with_tag(ciphertext, self.encryption_key, iv, tag, profile)
+            return self._decrypt_aes_gcm_with_tag(ciphertext, self.encryption_key, iv, tag, profile, additional_data)
         elif self.active_cipher == 'chacha20':
             full_ciphertext = ciphertext + tag
-            return self._decrypt_chacha20(full_ciphertext, self.encryption_key, iv, profile)
+            return self._decrypt_chacha20(full_ciphertext, self.encryption_key, iv, profile, additional_data)
         elif self.active_cipher == 'aes_ocb':
             full_ciphertext = ciphertext + tag
-            return self._decrypt_aes_ocb(full_ciphertext, self.encryption_key, iv, profile)
+            return self._decrypt_aes_ocb(full_ciphertext, self.encryption_key, iv, profile, additional_data)
         else:
             raise ValueError(f"Unknown cipher profile: {self.active_cipher}")
     
-    def _encrypt_aes_gcm(self, data: bytes, key: bytes, profile: CipherProfile) -> Tuple[bytes, bytes]:
+    def _encrypt_aes_gcm(self, data: bytes, key: bytes, profile: CipherProfile, additional_data: bytes = b"") -> Tuple[bytes, bytes]:
         iv = os.urandom(profile.iv_size)
         cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
         encryptor = cipher.encryptor()
+        if additional_data:
+            encryptor.authenticate_additional_data(additional_data)
         ciphertext = encryptor.update(data) + encryptor.finalize()
         return ciphertext + encryptor.tag, iv
     
@@ -125,35 +123,37 @@ class AdaptiveCipherSuite:
         decryptor = cipher.decryptor()
         return decryptor.update(actual_ciphertext) + decryptor.finalize()
 
-    def _decrypt_aes_gcm_with_tag(self, ciphertext: bytes, key: bytes, iv: bytes, tag: bytes, profile: CipherProfile) -> bytes:
+    def _decrypt_aes_gcm_with_tag(self, ciphertext: bytes, key: bytes, iv: bytes, tag: bytes, profile: CipherProfile, additional_data: bytes = b"") -> bytes:
         cipher = Cipher(algorithms.AES(key), modes.GCM(iv, tag), backend=default_backend())
         decryptor = cipher.decryptor()
+        if additional_data:
+            decryptor.authenticate_additional_data(additional_data)
         return decryptor.update(ciphertext) + decryptor.finalize()
     
-    def _encrypt_chacha20(self, data: bytes, key: bytes, profile: CipherProfile) -> Tuple[bytes, bytes]:
+    def _encrypt_chacha20(self, data: bytes, key: bytes, profile: CipherProfile, additional_data: bytes = b"") -> Tuple[bytes, bytes]:
         cipher = ChaCha20Poly1305(key)
         nonce = os.urandom(12)
-        ciphertext = cipher.encrypt(nonce, data, None)
+        ciphertext = cipher.encrypt(nonce, data, additional_data)
         return ciphertext, nonce
     
-    def _decrypt_chacha20(self, ciphertext: bytes, key: bytes, nonce: bytes, profile: CipherProfile) -> bytes:
+    def _decrypt_chacha20(self, ciphertext: bytes, key: bytes, nonce: bytes, profile: CipherProfile, additional_data: bytes = b"") -> bytes:
         cipher = ChaCha20Poly1305(key)
         try:
-            plaintext = cipher.decrypt(nonce, ciphertext, None)
+            plaintext = cipher.decrypt(nonce, ciphertext, additional_data)
             return plaintext
         except Exception as e:
             raise ValueError(f"ChaCha20-Poly1305 decryption failed: {e}")
     
-    def _encrypt_aes_ocb(self, data: bytes, key: bytes, profile: CipherProfile) -> Tuple[bytes, bytes]:
+    def _encrypt_aes_ocb(self, data: bytes, key: bytes, profile: CipherProfile, additional_data: bytes = b"") -> Tuple[bytes, bytes]:
         cipher = AESGCM(key)
         nonce = os.urandom(12)
-        ciphertext = cipher.encrypt(nonce, data, None)
+        ciphertext = cipher.encrypt(nonce, data, additional_data)
         return ciphertext, nonce
 
-    def _decrypt_aes_ocb(self, ciphertext: bytes, key: bytes, nonce: bytes, profile: CipherProfile) -> bytes:
+    def _decrypt_aes_ocb(self, ciphertext: bytes, key: bytes, nonce: bytes, profile: CipherProfile, additional_data: bytes = b"") -> bytes:
         cipher = AESGCM(key)
         try:
-            plaintext = cipher.decrypt(nonce, ciphertext, None)
+            plaintext = cipher.decrypt(nonce, ciphertext, additional_data)
             return plaintext
         except Exception as e:
             raise ValueError(f"AES-GCM decryption failed: {e}")

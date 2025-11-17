@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Setup script for Sush Core
+Setup script for sushCore
 """
 
 from setuptools import setup, find_packages
@@ -14,11 +14,11 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="sush-core",
     version="1.0.0",
-    author="Sush Core Development Team",
-    description="Advanced censorship circumvention system",
+    author="sushCore Development Team",
+    description="sushCore: advanced censorship circumvention system",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    packages=find_packages(),
+    packages=find_packages(include=['sush', 'sush.*']),
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
@@ -34,15 +34,17 @@ setup(
         "Topic :: System :: Networking",
     ],
     python_requires=">=3.9",
-    install_requires=requirements,    entry_points={
+    install_requires=requirements,
+    entry_points={
         "console_scripts": [
             "sush=sush_cli:main",
         ],
     },
     include_package_data=True,
     package_data={
-        "spectralflow": ["config/*.conf"],
-    },    project_urls={
+        "sush": ["config/*.conf"],
+    },
+    project_urls={
         "Bug Reports": "https://github.com/soroushdeimi/sush-core/issues",
         "Source": "https://github.com/soroushdeimi/sush-core",
         "Documentation": "https://github.com/soroushdeimi/sush-core/blob/main/docs/",

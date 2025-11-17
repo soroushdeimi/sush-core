@@ -1,106 +1,126 @@
-# Sush Core
+# sushCore
 
-*Next-gen proxy that adapts to bypass censorship*
+*Quantum-resistant adaptive proxy built for hostile networks*
 
-Sush Core is a censorship circumvention tool built for hostile network environments. It combines quantum-safe crypto with adaptive protocols to stay ahead of detection systems.
+sushCore is an R&D project exploring censorship-resistant networking. It mixes
+post-quantum key exchange, adaptive transports, and multi-layer obfuscation to
+keep traffic moving even when networks fight back.
 
-## What's Inside
+## Key Capabilities
 
-- **Quantum-Safe Crypto**: Uses ML-KEM (Kyber) - your keys won't break when quantum computers arrive
-- **Protocol Chameleon**: Switches between QUIC, WebSocket, TCP, UDP based on what works
-- **Hidden Channels**: Tunnels data through DNS queries, NTP packets, and TTL manipulation
-- **Smart Detection**: ML models learn censorship patterns and adapt automatically
-- **Onion Routing**: Multi-hop encryption like Tor, but harder to block
-- **Traffic Disguise**: Makes your packets look like regular web browsing
+- **Quantum-safe crypto**: ML-KEM (Kyber) key exchange with HKDF-based session keys
+- **Adaptive transports**: TCP/UDP switching, QUIC/WebSocket fallbacks, port hopping
+- **Steganographic channels**: TTL, DNS, and NTP side channels for covert signalling
+- **Traffic morphing**: Padding and timing jitter to disguise packet fingerprints
+- **MirrorNet**: Multi-hop routing and node integrity scaffolding (simulated for now)
+- **Adaptive control loop**: Condition evaluators + (optional) ML classifiers for threat response
 
-## Getting Started
+> ℹ️ Several components (MirrorNet overlays, advanced ML models, real bridge relays)
+> are still mocked/simulated. See [ARCHITECTURE.md](ARCHITECTURE.md) for the current
+> implementation level by layer.
 
-### Setup
+## Setup
 
-```bash
+### Requirements
+
+- Python 3.9+
+- A virtual environment is strongly recommended
+
+### Installation
+
+`ash
 git clone https://github.com/soroushdeimi/sush-core.git
 cd sush-core
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-```
 
-### Run as Proxy
+# Optional: develop mode
+pip install -e .
+`
 
-```bash
-# Start the client proxy
-python sush_cli.py client --config config/client.conf
+### Optional dependencies
 
-# Point your browser to localhost:8080 (SOCKS5)
-```
+The default requirements already pull in heavy packages such as cryptography,
+pynacl, and scikit-learn. If you only need the lightweight smoke tests, you
+can comment those packages out temporarily before installation. Advanced features
+will automatically degrade (and tests will skip) when these libraries are absent.
 
-### Run a Server Node
+## CLI Usage
 
-```bash
-# Copy and edit server config
-cp config/server.conf.example config/server.conf
-vim config/server.conf  # Add your server details
+`ash
+# Interactive REPL
+python sush_cli.py interactive
 
-# Start serving
-python sush_cli.py server --config config/server.conf
-```
+# Run a local SOCKS proxy that forwards to example.org:80
+python sush_cli.py proxy 8080 example.org 80
+
+# One-shot connect helper (sends optional data payload)
+python sush_cli.py connect example.org 443 --data "ping"
+`
+
+## Python API Example
+
+`python
+import asyncio
+from sush.client import SushClient, ClientConfig
+
+async def main():
+    config = ClientConfig(log_level="INFO")
+    client = SushClient(config)
+    await client.start()
+
+    status = client.get_status()
+    print("Node ID:", status["node_id"], "Threat:", status["security_status"]["current_threat_level"])
+
+    await client.stop()
+
+asyncio.run(main())
+`
 
 ## Configuration
 
-### Environment Variables
-```bash
+### Environment variables
+
+`ash
 export SUSH_SERVER_HOST=your-server.com
 export SUSH_SERVER_PORT=9090
 export SUSH_THREAT_LEVEL=high  # low, medium, high, paranoid
 export SUSH_ML_ENABLE=true
-```
+`
 
-### Config Files
-- `config/client.conf` - Client settings
-- `config/server.conf` - Server settings
+### Config files
 
-Check [USER_GUIDE.md](USER_GUIDE.md) for detailed configuration options.
+- config/client.conf
+- config/server.conf
 
-## How It Works
-
-Sush Core has four main layers:
-
-- **Core**: Quantum crypto, adaptive encryption, traffic morphing
-- **Transport**: Protocol switching, steganographic hiding
-- **Network**: Multi-hop routing, node verification
-- **Control**: ML adaptation, censorship detection
-
-Read [ARCHITECTURE.md](ARCHITECTURE.md) for the technical deep-dive.
+See [USER_GUIDE.md](USER_GUIDE.md) for the full configuration reference.
 
 ## Testing
 
-```bash
-# Run all tests
+`ash
+# Lightweight smoke test (no extra dependencies required)
+python tests/test_smoke.py
+
+# Full validation suite (requires requirements.txt dependencies)
 python run_tests.py
+`
 
-# Quick smoke test
-python tests/test_core_components.py
-```
+Both the integration and comprehensive suites gracefully skip when optional
+libraries are missing. Install the full dependency stack for maximum coverage.
 
-## Contributing
+## Architecture & Roadmap
 
-Found a bug? Want to add a feature? Here's how:
+- Read [ARCHITECTURE.md](ARCHITECTURE.md) for a layer-by-layer breakdown
+- Planned enhancements: bridge discovery, mobile clients, browser WebAssembly,
+  improved ML models, and performance tuning
 
-- File issues on [GitHub Issues](https://github.com/soroushdeimi/sush-core/issues)
-- Submit pull requests for features
-- Join discussions in [GitHub Discussions](https://github.com/soroushdeimi/sush-core/discussions)
+## Support & Contributing
 
-## What's Next
+- Issues / ideas: [GitHub Issues](https://github.com/soroushdeimi/sush-core/issues)
+- Discussions: [GitHub Discussions](https://github.com/soroushdeimi/sush-core/discussions)
+- Pull requests welcome—please include smoke tests or integration updates when possible
 
-- Bridge discovery protocol
-- Mobile apps (iOS/Android)
-- Browser extension (WebAssembly)
-- Better ML models
-- Performance improvements
-  
-## Legal Notice
-
-This is research software for legitimate privacy protection. You're responsible for following your local laws.
-
----
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License — see [LICENSE](LICENSE) for details.

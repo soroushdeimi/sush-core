@@ -1,6 +1,5 @@
 """Quantum-resistant obfuscation system."""
 
-import asyncio
 import logging
 from typing import Dict, Any, Optional, Tuple, List
 from dataclasses import dataclass
@@ -62,7 +61,7 @@ class QuantumObfuscator:
         ciphertext, shared_secret = self.kem.encapsulate(peer_public_key)
         
         # Derive symmetric keys
-        derived_keys = self.kem.derive_symmetric_keys(shared_secret, session_id.encode())
+        derived_keys = self.kem.derive_keys(shared_secret, session_id.encode())
         
         # Select initial cipher profile
         cipher_profile = self.cipher_suite.select_cipher_profile(threat_level, network_condition)
@@ -106,7 +105,7 @@ class QuantumObfuscator:
         shared_secret = self.kem.decapsulate(ciphertext, self.private_key)
         
         # Derive symmetric keys
-        derived_keys = self.kem.derive_symmetric_keys(shared_secret, session_id.encode())
+        derived_keys = self.kem.derive_keys(shared_secret, session_id.encode())
         
         # Select initial cipher profile
         cipher_profile = self.cipher_suite.select_cipher_profile(threat_level, network_condition)
@@ -202,7 +201,9 @@ class QuantumObfuscator:
             raise ValueError("No derived keys available")
           
         # Ensure consistent key derivation
-        if 'encryption_key' in context.derived_keys:
+        if 'aes_key' in context.derived_keys:
+            encryption_key = context.derived_keys['aes_key']
+        elif 'encryption_key' in context.derived_keys:
             encryption_key = context.derived_keys['encryption_key']
         elif 'key' in context.derived_keys:
             encryption_key = context.derived_keys['key']

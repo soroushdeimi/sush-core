@@ -1,14 +1,13 @@
 """Automated response to detected threats."""
 
-import asyncio
-import time
+import logging
 import random
-from typing import Dict, List, Optional, Callable, Any
+import time
 from dataclasses import dataclass
 from enum import Enum, auto
-import logging
+from typing import Any, Callable, Dict, List, Optional
 
-from .censorship_detector import ThreatEvent, ThreatLevel, CensorshipType
+from .censorship_detector import CensorshipType, ThreatEvent, ThreatLevel
 
 
 class ResponseAction(Enum):
