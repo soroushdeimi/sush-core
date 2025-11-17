@@ -40,10 +40,6 @@ jobs:
             echo "Error: Merge conflict markers found in code"
             exit 1
           fi
-          if grep -r "^=======$" . --include="*.py" | grep -v "print" | grep -v "def " | grep -v "class " | grep -v "#" | grep -v "=" | grep -v "^$"; then
-            echo "Error: Merge conflict separator found in code"
-            exit 1
-          fi
 
       - name: Run Ruff format check
         continue-on-error: false
