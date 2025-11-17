@@ -4,11 +4,11 @@ Quick validation test for sushCore components.
 Simple tests to verify basic functionality.
 """
 
-import sys
-import os
-import time
-import secrets
 import asyncio
+import os
+import secrets
+import sys
+import time
 
 # Add the parent directory to the path to import sush
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -40,16 +40,16 @@ def test_imports():
     """Test that all modules can be imported."""
     print("Testing imports...")
     try:
-        from sush.core.quantum_obfuscator import QuantumObfuscator
-        from sush.core.ml_kem import MLKEMKeyExchange
+        from sush.control.adaptive_control import AdaptiveControlLoop
+        from sush.control.censorship_detector import CensorshipDetector
         from sush.core.adaptive_cipher import AdaptiveCipherSuite
+        from sush.core.ml_kem import MLKEMKeyExchange
+        from sush.core.quantum_obfuscator import QuantumObfuscator
+        from sush.network.node_integrity import SimplifiedNodeIntegrity
+        from sush.network.onion_routing import OnionRoutingProtocol
         from sush.transport.adaptive_transport import AdaptiveTransport
         from sush.transport.protocol_hopper import ProtocolHopper
         from sush.transport.steganographic_channels import ChannelManager
-        from sush.network.onion_routing import OnionRoutingProtocol
-        from sush.network.node_integrity import SimplifiedNodeIntegrity
-        from sush.control.adaptive_control import AdaptiveControlLoop
-        from sush.control.censorship_detector import CensorshipDetector
 
         print("All imports successful")
         return True
@@ -99,7 +99,7 @@ def test_aead_ciphers():
     """Test AEAD cipher implementations."""
     print("Testing AEAD ciphers...")
     try:
-        from sush.core.adaptive_cipher import AdaptiveCipherSuite, ThreatLevel, NetworkCondition
+        from sush.core.adaptive_cipher import AdaptiveCipherSuite, NetworkCondition, ThreatLevel
 
         cipher_suite = AdaptiveCipherSuite()
         cipher_suite.encryption_key = b"0" * 32  # Set a test key
@@ -133,7 +133,7 @@ def test_onion_encryption():
     """Test onion routing encryption."""
     print("Testing onion encryption...")
     try:
-        from sush.network.onion_routing import OnionRoutingProtocol, OnionLayer
+        from sush.network.onion_routing import OnionLayer, OnionRoutingProtocol
 
         orpp = OnionRoutingProtocol("test_node", b"test_private_key")
         layer = OnionLayer(
@@ -217,11 +217,11 @@ def test_condition_evaluation():
 
         # Test high threat
         context_high = {"threat_level": ThreatLevel.HIGH}
-        assert condition.evaluate(context_high) == True, "High threat condition failed"
+        assert condition.evaluate(context_high), "High threat condition failed"
 
         # Test low threat
         context_low = {"threat_level": ThreatLevel.LOW}
-        assert condition.evaluate(context_low) == False, "Low threat condition failed"
+        assert not condition.evaluate(context_low), "Low threat condition failed"
 
         print("Condition evaluation working correctly")
         return True
