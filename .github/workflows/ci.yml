@@ -72,7 +72,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run smoke tests
-        run: python tests/test_smoke.py
+        run: python tests/smoke_test.py
 
       - name: Run full validation suite
         run: python run_tests.py

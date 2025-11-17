@@ -28,7 +28,7 @@ keep traffic moving even when networks fight back.
 
 ### Installation
 
-`ash
+```bash
 git clone https://github.com/soroushdeimi/sush-core.git
 cd sush-core
 python -m venv .venv
@@ -37,7 +37,7 @@ pip install -r requirements.txt
 
 # Optional: develop mode
 pip install -e .
-`
+```
 
 ### Optional dependencies
 
@@ -48,7 +48,7 @@ will automatically degrade (and tests will skip) when these libraries are absent
 
 ## CLI Usage
 
-`ash
+```bash
 # Interactive REPL
 python sush_cli.py interactive
 
@@ -57,11 +57,11 @@ python sush_cli.py proxy 8080 example.org 80
 
 # One-shot connect helper (sends optional data payload)
 python sush_cli.py connect example.org 443 --data "ping"
-`
+```
 
 ## Python API Example
 
-`python
+```python
 import asyncio
 from sush.client import SushClient, ClientConfig
 
@@ -76,18 +76,18 @@ async def main():
     await client.stop()
 
 asyncio.run(main())
-`
+```
 
 ## Configuration
 
 ### Environment variables
 
-`ash
+```bash
 export SUSH_SERVER_HOST=your-server.com
 export SUSH_SERVER_PORT=9090
 export SUSH_THREAT_LEVEL=high  # low, medium, high, paranoid
 export SUSH_ML_ENABLE=true
-`
+```
 
 ### Config files
 
@@ -98,13 +98,13 @@ See [USER_GUIDE.md](USER_GUIDE.md) for the full configuration reference.
 
 ## Testing
 
-`ash
+```bash
 # Lightweight smoke test (no extra dependencies required)
-python tests/test_smoke.py
+python tests/smoke_test.py
 
 # Full validation suite (requires requirements.txt dependencies)
 python run_tests.py
-`
+```
 
 Both the integration and comprehensive suites gracefully skip when optional
 libraries are missing. Install the full dependency stack for maximum coverage.

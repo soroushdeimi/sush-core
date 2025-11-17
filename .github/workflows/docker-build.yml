@@ -34,7 +34,7 @@ jobs:
 
       - name: Run unit tests inside container
         run: |
-          docker run --rm sushcore:test python tests/test_smoke.py
+          docker run --rm sushcore:test python tests/smoke_test.py
           docker run --rm sushcore:test python run_tests.py
 
 

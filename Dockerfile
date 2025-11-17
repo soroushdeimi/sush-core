@@ -11,6 +11,7 @@ RUN python -m pip install --upgrade pip && \
     pip install --user -r requirements.txt
 
 COPY . .
+RUN pip install --user -e .
 
 EXPOSE 8443 8080
 
