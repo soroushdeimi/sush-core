@@ -59,7 +59,7 @@ def main():
         run_command(
             ["python", "scripts/check_merge_conflicts.py"],
             "Check for merge conflicts",
-            check=False
+            check=False,
         )
     )
 
@@ -68,7 +68,7 @@ def main():
         run_command(
             ["ruff", "format", "--check", "."],
             "Ruff format check",
-            check=True
+            check=True,
         )
     )
 
@@ -77,15 +77,14 @@ def main():
         run_command(
             ["ruff", "check", "."],
             "Ruff lint check",
-            check=True
+            check=True,
         )
     )
 
     # Summary
-    separator = "=" * 60
-    print(f"\n{separator}")
+    print("\n" + "=" * 60)
     print("CI Check Summary")
-    print(separator)
+    print("=" * 60)
 
     passed = sum(results)
     total = len(results)
