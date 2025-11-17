@@ -19,7 +19,7 @@ OPTIONAL_DEPENDENCIES = {
     "pynacl",
     "nacl",
     "kyber_py",
-    "kyber-py"
+    "kyber-py",
 }
 
 OPTIONAL_IMPORT_ERROR = None
@@ -27,17 +27,26 @@ OPTIONAL_IMPORT_ERROR = None
 try:
     from sush.core.quantum_obfuscator import QuantumObfuscator
     from sush.core.ml_kem import MLKEMKeyExchange
-    from sush.core.adaptive_cipher import AdaptiveCipherSuite, ThreatLevel as CipherThreatLevel, NetworkCondition
+    from sush.core.adaptive_cipher import (
+        AdaptiveCipherSuite,
+        ThreatLevel as CipherThreatLevel,
+        NetworkCondition,
+    )
     from sush.transport.adaptive_transport import AdaptiveTransport
     from sush.transport.protocol_hopper import ProtocolHopper
     from sush.transport.steganographic_channels import ChannelManager
     from sush.network.onion_routing import OnionRoutingProtocol, OnionLayer
     from sush.network.node_integrity import SimplifiedNodeIntegrity
     from sush.control.adaptive_control import (
-        ThreatLevelCondition, CensorshipTypeCondition, CompoundCondition
+        ThreatLevelCondition,
+        CensorshipTypeCondition,
+        CompoundCondition,
     )
     from sush.control.censorship_detector import (
-        CensorshipDetector, NetworkMetrics, ThreatLevel as DetectorThreatLevel, CensorshipType
+        CensorshipDetector,
+        NetworkMetrics,
+        ThreatLevel as DetectorThreatLevel,
+        CensorshipType,
     )
 except ModuleNotFoundError as exc:
     if exc.name in OPTIONAL_DEPENDENCIES:
@@ -88,10 +97,7 @@ async def test_security_hardening():
     print("  Testing onion routing primitives...")
     onion = OnionRoutingProtocol("integration_node", os.urandom(32))
     layer = OnionLayer(
-        node_id="hop0",
-        public_key=os.urandom(32),
-        shared_secret=os.urandom(32),
-        hop_number=0
+        node_id="hop0", public_key=os.urandom(32), shared_secret=os.urandom(32), hop_number=0
     )
     encrypted = onion._encrypt_with_layer(layer, payload)
     decrypted = onion._decrypt_with_layer(layer, encrypted)
@@ -118,7 +124,7 @@ async def test_functional_components():
     # Steganographic channels
     print("  Testing steganographic channel registry...")
     channels = ChannelManager()
-    assert {'ttl', 'ntp', 'dns'} <= set(channels.channels.keys())
+    assert {"ttl", "ntp", "dns"} <= set(channels.channels.keys())
 
     # Protocol hopper
     print("  Testing protocol hopper sequence generation...")
@@ -156,23 +162,25 @@ async def test_ml_enhancements():
         rst_packets=2,
         retransmissions=1,
         jitter=0.01,
-        bandwidth_utilization=0.6
+        bandwidth_utilization=0.6,
     )
     features = detector._extract_features(metrics)
     assert len(features) == 15
 
     # Condition evaluation
     print("  Testing adaptive control conditions...")
-    threat_condition = ThreatLevelCondition('>=', DetectorThreatLevel.HIGH)
+    threat_condition = ThreatLevelCondition(">=", DetectorThreatLevel.HIGH)
     censorship_condition = CensorshipTypeCondition(CensorshipType.DPI_FILTERING)
-    compound = CompoundCondition(threat_condition, 'AND', censorship_condition)
+    compound = CompoundCondition(threat_condition, "AND", censorship_condition)
 
-    assert threat_condition.evaluate({'threat_level': DetectorThreatLevel.HIGH})
-    assert not threat_condition.evaluate({'threat_level': DetectorThreatLevel.LOW})
-    assert compound.evaluate({
-        'threat_level': DetectorThreatLevel.CRITICAL,
-        'detected_censorship': [CensorshipType.DPI_FILTERING]
-    })
+    assert threat_condition.evaluate({"threat_level": DetectorThreatLevel.HIGH})
+    assert not threat_condition.evaluate({"threat_level": DetectorThreatLevel.LOW})
+    assert compound.evaluate(
+        {
+            "threat_level": DetectorThreatLevel.CRITICAL,
+            "detected_censorship": [CensorshipType.DPI_FILTERING],
+        }
+    )
 
     print("Phase 3: ML Enhancements - PASSED\n")
 

@@ -14,7 +14,6 @@ import asyncio
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-
 OPTIONAL_DEPENDENCIES = {
     "cryptography",
     "numpy",
@@ -25,16 +24,17 @@ OPTIONAL_DEPENDENCIES = {
     "nacl",
     "kyber_py",
     "kyber-py",
-    "aiohttp"
+    "aiohttp",
 }
 
 
 def _skip_optional_dependency(error: ModuleNotFoundError, context: str) -> bool:
-    missing = getattr(error, 'name', None)
+    missing = getattr(error, "name", None)
     if missing in OPTIONAL_DEPENDENCIES:
         print(f"Skipping {context}: optional dependency '{missing}' is not installed.")
         return True
     return False
+
 
 def test_imports():
     """Test that all modules can be imported."""
@@ -50,10 +50,11 @@ def test_imports():
         from sush.network.node_integrity import SimplifiedNodeIntegrity
         from sush.control.adaptive_control import AdaptiveControlLoop
         from sush.control.censorship_detector import CensorshipDetector
+
         print("All imports successful")
         return True
     except ModuleNotFoundError as e:
-        if _skip_optional_dependency(e, 'Import Test'):
+        if _skip_optional_dependency(e, "Import Test"):
             return True
         print(f"Import failed: {e}")
         return False
@@ -67,25 +68,25 @@ def test_ml_kem():
     print("Testing ML-KEM...")
     try:
         from sush.core.ml_kem import MLKEMKeyExchange
-        
+
         kem = MLKEMKeyExchange()
         public_key, private_key = kem.generate_keypair()
-        
+
         # Basic size checks
         assert len(public_key) == 1184, f"Wrong public key size: {len(public_key)}"
         assert len(private_key) == 2400, f"Wrong private key size: {len(private_key)}"
-        
+
         # Test encapsulation/decapsulation
         ciphertext, shared_secret1 = kem.encapsulate(public_key)
         shared_secret2 = kem.decapsulate(ciphertext, private_key)
-        
+
         assert shared_secret1 == shared_secret2, "Shared secrets don't match"
         assert len(shared_secret1) == 32, f"Wrong shared secret size: {len(shared_secret1)}"
-        
+
         print("ML-KEM working correctly")
         return True
     except ModuleNotFoundError as e:
-        if _skip_optional_dependency(e, 'ML-KEM Test'):
+        if _skip_optional_dependency(e, "ML-KEM Test"):
             return True
         print(f"ML-KEM test failed: {e}")
         return False
@@ -99,27 +100,27 @@ def test_aead_ciphers():
     print("Testing AEAD ciphers...")
     try:
         from sush.core.adaptive_cipher import AdaptiveCipherSuite, ThreatLevel, NetworkCondition
-        
+
         cipher_suite = AdaptiveCipherSuite()
-        cipher_suite.encryption_key = b'0' * 32  # Set a test key
+        cipher_suite.encryption_key = b"0" * 32  # Set a test key
         test_data = b"test encryption data"
-        
+
         # Test AES-GCM (default)
-        cipher_suite.active_cipher = 'aes_gcm'
+        cipher_suite.active_cipher = "aes_gcm"
         encrypted, iv, tag = cipher_suite.encrypt(test_data)
         decrypted = cipher_suite.decrypt(encrypted, iv, tag)
         assert decrypted == test_data, "AES-GCM failed"
-        
+
         # Test ChaCha20-Poly1305
-        cipher_suite.active_cipher = 'chacha20'
+        cipher_suite.active_cipher = "chacha20"
         encrypted, iv, tag = cipher_suite.encrypt(test_data)
         decrypted = cipher_suite.decrypt(encrypted, iv, tag)
         assert decrypted == test_data, "ChaCha20 failed"
-        
+
         print("AEAD ciphers working correctly")
         return True
     except ModuleNotFoundError as e:
-        if _skip_optional_dependency(e, 'AEAD Ciphers Test'):
+        if _skip_optional_dependency(e, "AEAD Ciphers Test"):
             return True
         print(f"AEAD test failed: {e}")
         return False
@@ -133,26 +134,26 @@ def test_onion_encryption():
     print("Testing onion encryption...")
     try:
         from sush.network.onion_routing import OnionRoutingProtocol, OnionLayer
-        
+
         orpp = OnionRoutingProtocol("test_node", b"test_private_key")
         layer = OnionLayer(
             node_id="test_node",
-            public_key=b"test_public_key", 
+            public_key=b"test_public_key",
             shared_secret=secrets.token_bytes(32),
-            hop_number=0
+            hop_number=0,
         )
-        
+
         test_data = b"sensitive data"
         encrypted = orpp._encrypt_with_layer(layer, test_data)
         decrypted = orpp._decrypt_with_layer(layer, encrypted)
-        
+
         assert decrypted == test_data, "Onion encryption failed"
         assert encrypted != test_data, "Data should be encrypted"
-        
+
         print("Onion encryption working correctly")
         return True
     except ModuleNotFoundError as e:
-        if _skip_optional_dependency(e, 'Onion Encryption Test'):
+        if _skip_optional_dependency(e, "Onion Encryption Test"):
             return True
         print(f"Onion encryption test failed: {e}")
         return False
@@ -166,17 +167,17 @@ async def test_ml_detection():
     print("Testing ML detection...")
     try:
         from sush.control.censorship_detector import CensorshipDetector, NetworkMetrics
-        
+
         detector = CensorshipDetector()
-        
+
         # Check ML components exist
-        assert hasattr(detector, 'anomaly_detector'), "Missing anomaly detector"
-        assert hasattr(detector, 'threat_classifier'), "Missing threat classifier"
-        
+        assert hasattr(detector, "anomaly_detector"), "Missing anomaly detector"
+        assert hasattr(detector, "threat_classifier"), "Missing threat classifier"
+
         # Train models
         await detector.train_ml_models()
         assert detector.ml_models_trained, "ML models not trained"
-        
+
         # Test feature extraction
         test_metrics = NetworkMetrics(
             timestamp=time.time(),
@@ -187,16 +188,16 @@ async def test_ml_detection():
             rst_packets=10,
             retransmissions=5,
             jitter=0.02,
-            bandwidth_utilization=0.7
+            bandwidth_utilization=0.7,
         )
-        
+
         features = detector._extract_features(test_metrics)
         assert len(features) == 15, f"Wrong feature count: {len(features)}"
-        
+
         print("ML detection working correctly")
         return True
     except ModuleNotFoundError as e:
-        if _skip_optional_dependency(e, 'ML Detection Test'):
+        if _skip_optional_dependency(e, "ML Detection Test"):
             return True
         print(f"ML detection test failed: {e}")
         return False
@@ -211,21 +212,21 @@ def test_condition_evaluation():
     try:
         from sush.control.adaptive_control import ThreatLevelCondition
         from sush.control.censorship_detector import ThreatLevel
-        
-        condition = ThreatLevelCondition('>=', ThreatLevel.HIGH)
-        
+
+        condition = ThreatLevelCondition(">=", ThreatLevel.HIGH)
+
         # Test high threat
-        context_high = {'threat_level': ThreatLevel.HIGH}
+        context_high = {"threat_level": ThreatLevel.HIGH}
         assert condition.evaluate(context_high) == True, "High threat condition failed"
-        
+
         # Test low threat
-        context_low = {'threat_level': ThreatLevel.LOW}
+        context_low = {"threat_level": ThreatLevel.LOW}
         assert condition.evaluate(context_low) == False, "Low threat condition failed"
-        
+
         print("Condition evaluation working correctly")
         return True
     except ModuleNotFoundError as e:
-        if _skip_optional_dependency(e, 'Condition Evaluation Test'):
+        if _skip_optional_dependency(e, "Condition Evaluation Test"):
             return True
         print(f"Condition evaluation test failed: {e}")
         return False
@@ -238,27 +239,27 @@ async def main():
     """Run all quick validation tests."""
     print("sushCore Phase 4 Quick Validation")
     print("=" * 40)
-    
+
     tests = [
         ("Import Test", test_imports()),
         ("ML-KEM Test", test_ml_kem()),
         ("AEAD Ciphers Test", test_aead_ciphers()),
         ("Onion Encryption Test", test_onion_encryption()),
         ("ML Detection Test", await test_ml_detection()),
-        ("Condition Evaluation Test", test_condition_evaluation())
+        ("Condition Evaluation Test", test_condition_evaluation()),
     ]
-    
+
     passed = 0
     total = len(tests)
-    
+
     for name, result in tests:
         if result:
             passed += 1
         else:
             print(f"{name} failed with exception")
-    
+
     print(f"Results: {passed}/{total} tests passed")
-    
+
     if passed == total:
         print("ALL TESTS PASSED!")
         return True

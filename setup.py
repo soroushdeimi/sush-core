@@ -18,7 +18,7 @@ setup(
     description="sushCore: advanced censorship circumvention system",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    packages=find_packages(include=['sush', 'sush.*']),
+    packages=find_packages(include=["sush", "sush.*"]),
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",

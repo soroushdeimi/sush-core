@@ -17,21 +17,21 @@ from sush.client import SushClient, ClientConfig
 async def run_client_interactive():
     """Run client in interactive mode."""
     config = ClientConfig(log_level="INFO")
-    
+
     async with SushClient(config) as client:
         print(f"sushCore Client Started (Node ID: {client.config.node_id})")
         print("Type 'help' for available commands")
-        
+
         while True:
             try:
                 command = input("sush> ").strip()
-                
+
                 if not command:
                     continue
-                
+
                 parts = command.split()
                 cmd = parts[0].lower()
-                
+
                 if cmd == "help":
                     print_help()
                 elif cmd == "status":
@@ -62,7 +62,7 @@ async def run_client_interactive():
                     break
                 else:
                     print(f"Unknown command: {cmd}")
-                    
+
             except KeyboardInterrupt:
                 print("\nUse 'quit' to exit")
             except Exception as e:
@@ -87,7 +87,7 @@ Available commands:
 async def show_status(client):
     """Show client status."""
     status = client.get_status()
-    
+
     print(f"Status: {'Running' if status['is_running'] else 'Stopped'}")
     print(f"Connected: {'Yes' if status['is_connected'] else 'No'}")
     print(f"Active Connections: {status['active_connections']}")
@@ -120,17 +120,19 @@ async def disconnect_command(client, connection_id):
 async def list_connections(client):
     """List active connections."""
     status = client.get_status()
-    if status['active_connections'] == 0:
+    if status["active_connections"] == 0:
         print("No active connections")
         return
-    
+
     print("Active connections:")
     for connection_id in client.active_connections:
         stats = client.get_connection_stats(connection_id)
         if stats:
-            print(f"  {connection_id}: {stats['destination']}:{stats['port']} "
-                  f"({stats['duration']:.1f}s, {stats['bytes_sent']}B sent, "
-                  f"{stats['bytes_received']}B received)")
+            print(
+                f"  {connection_id}: {stats['destination']}:{stats['port']} "
+                f"({stats['duration']:.1f}s, {stats['bytes_sent']}B sent, "
+                f"{stats['bytes_received']}B received)"
+            )
 
 
 async def send_command(client, connection_id, data):
@@ -159,13 +161,13 @@ async def run_proxy_mode(local_port, remote_host, remote_port):
     config = ClientConfig(log_level="WARNING")
     async with SushClient(config) as client:
         print(f"sushCore Proxy: localhost:{local_port} -> {remote_host}:{remote_port}")
-        
+
         async def handle_proxy_connection(reader, writer):
             """Handle incoming proxy connection."""
             try:
                 # Connect through sushCore
                 connection_id = await client.connect(remote_host, remote_port, "tcp")
-                
+
                 # Relay data bidirectionally
                 async def relay_to_remote():
                     while True:
@@ -173,7 +175,7 @@ async def run_proxy_mode(local_port, remote_host, remote_port):
                         if not data:
                             break
                         await client.send_data(connection_id, data)
-                
+
                 async def relay_from_remote():
                     while True:
                         data = await client.receive_data(connection_id, timeout=1.0)
@@ -181,32 +183,24 @@ async def run_proxy_mode(local_port, remote_host, remote_port):
                             continue
                         writer.write(data)
                         await writer.drain()
-                
+
                 # Run both relay tasks
-                await asyncio.gather(
-                    relay_to_remote(),
-                    relay_from_remote(),
-                    return_exceptions=True
-                )
-                
+                await asyncio.gather(relay_to_remote(), relay_from_remote(), return_exceptions=True)
+
             except Exception as e:
                 print(f"Proxy connection error: {e}")
             finally:
                 writer.close()
                 await writer.wait_closed()
-                if 'connection_id' in locals():
+                if "connection_id" in locals():
                     await client.close_connection(connection_id)
-        
+
         # Start proxy server
-        server = await asyncio.start_server(
-            handle_proxy_connection,
-            'localhost',
-            local_port
-        )
-        
+        server = await asyncio.start_server(handle_proxy_connection, "localhost", local_port)
+
         print(f"Proxy server listening on localhost:{local_port}")
         print("Press Ctrl+C to stop")
-        
+
         async with server:
             await server.serve_forever()
 
@@ -214,43 +208,42 @@ async def run_proxy_mode(local_port, remote_host, remote_port):
 def main():
     """Main CLI function."""
     parser = argparse.ArgumentParser(description="sushCore CLI")
-    subparsers = parser.add_subparsers(dest='command', help='Available commands')
-    
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
     # Interactive mode
-    interactive_parser = subparsers.add_parser('interactive', help='Run in interactive mode')
-    
+    interactive_parser = subparsers.add_parser("interactive", help="Run in interactive mode")
+
     # Proxy mode
-    proxy_parser = subparsers.add_parser('proxy', help='Run as SOCKS proxy')
-    proxy_parser.add_argument('local_port', type=int, help='Local port to bind')
-    proxy_parser.add_argument('remote_host', help='Remote host to connect to')
-    proxy_parser.add_argument('remote_port', type=int, help='Remote port to connect to')
-    
+    proxy_parser = subparsers.add_parser("proxy", help="Run as SOCKS proxy")
+    proxy_parser.add_argument("local_port", type=int, help="Local port to bind")
+    proxy_parser.add_argument("remote_host", help="Remote host to connect to")
+    proxy_parser.add_argument("remote_port", type=int, help="Remote port to connect to")
+
     # Quick connect
-    connect_parser = subparsers.add_parser('connect', help='Quick connect to target')
-    connect_parser.add_argument('host', help='Target host')
-    connect_parser.add_argument('port', type=int, help='Target port')
-    connect_parser.add_argument('--data', help='Data to send')
-    
+    connect_parser = subparsers.add_parser("connect", help="Quick connect to target")
+    connect_parser.add_argument("host", help="Target host")
+    connect_parser.add_argument("port", type=int, help="Target port")
+    connect_parser.add_argument("--data", help="Data to send")
+
     args = parser.parse_args()
-    
+
     if not args.command:
         parser.print_help()
         return
-    
+
     # Setup logging
     logging.basicConfig(
-        level=logging.WARNING,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        level=logging.WARNING, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
-    
+
     try:
-        if args.command == 'interactive':
+        if args.command == "interactive":
             asyncio.run(run_client_interactive())
-        elif args.command == 'proxy':
+        elif args.command == "proxy":
             asyncio.run(run_proxy_mode(args.local_port, args.remote_host, args.remote_port))
-        elif args.command == 'connect':
+        elif args.command == "connect":
             asyncio.run(quick_connect(args.host, args.port, args.data))
-    
+
     except KeyboardInterrupt:
         print("\nOperation cancelled by user")
     except Exception as e:
@@ -261,23 +254,23 @@ def main():
 async def quick_connect(host, port, data=None):
     """Quick connect to a target."""
     config = ClientConfig(log_level="INFO")
-    
+
     async with SushClient(config) as client:
         try:
             connection_id = await client.connect(host, port, "tcp")
             print(f"Connected to {host}:{port}")
-            
+
             if data:
                 await client.send_data(connection_id, data.encode())
                 print(f"Sent: {data}")
-                
+
                 response = await client.receive_data(connection_id, timeout=10.0)
                 if response:
                     print(f"Received: {response.decode('utf-8', errors='ignore')}")
-            
+
             await client.close_connection(connection_id)
             print("Connection closed")
-            
+
         except Exception as e:
             print(f"Connection failed: {e}")
 
