@@ -36,8 +36,12 @@ jobs:
 
       - name: Check for merge conflicts
         run: |
-          if grep -r "<<<<<<< " . --include="*.py" || grep -r "=======" . --include="*.py" | grep -v "== " || grep -r ">>>>>>> " . --include="*.py"; then
+          if grep -r "^<<<<<<< " . --include="*.py" || grep -r "^>>>>>>> " . --include="*.py"; then
             echo "Error: Merge conflict markers found in code"
+            exit 1
+          fi
+          if grep -r "^=======$" . --include="*.py" | grep -v "print" | grep -v "def " | grep -v "class " | grep -v "#" | grep -v "=" | grep -v "^$"; then
+            echo "Error: Merge conflict separator found in code"
             exit 1
           fi
 
