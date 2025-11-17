@@ -34,7 +34,10 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
 
-      - name: Run Ruff
+      - name: Run Ruff format check
+        run: ruff format --check .
+
+      - name: Run Ruff lint
         run: ruff check .
 
       - name: Run Black (check only)
@@ -76,6 +79,3 @@ jobs:
 
       - name: Run full validation suite
         run: python run_tests.py
-
-
-

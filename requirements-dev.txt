@@ -1,4 +1,5 @@
 black==24.8.0
 ruff==0.9.6
+pre-commit==3.7.0
 
 

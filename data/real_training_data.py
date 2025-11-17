@@ -5,13 +5,13 @@ Contains actual network censorship patterns and normal traffic signatures.
 """
 
 import json
+
 import numpy as np
-from typing import List, Tuple
 
 
 class RealTrainingDataProvider:
     """Provides real-world training data for censorship detection."""
-    
+
     def __init__(self):
         # Real censorship patterns observed in various countries
         self.censorship_patterns = {
@@ -52,7 +52,7 @@ class RealTrainingDataProvider:
                 'jitter': 0.02
             }
         }
-        
+
         # Normal network conditions from various regions
         self.normal_patterns = {
             'high_speed_fiber': {
@@ -88,16 +88,16 @@ class RealTrainingDataProvider:
                 'jitter': 0.05
             }
         }
-    
-    def generate_normal_samples(self, count: int = 100) -> List[List[float]]:
+
+    def generate_normal_samples(self, count: int = 100) -> list[list[float]]:
         """Generate normal network behavior samples."""
         samples = []
-        
+
         for _ in range(count):
             # Choose random normal pattern
             pattern_name = np.random.choice(list(self.normal_patterns.keys()))
             pattern = self.normal_patterns[pattern_name]
-            
+
             # Add realistic variations
             sample = [
                 max(0.001, np.random.normal(pattern['latency'], pattern['latency'] * 0.3)),
@@ -119,22 +119,22 @@ class RealTrainingDataProvider:
                 pattern['throughput'] * 0.1
             ]
             samples.append(sample)
-        
+
         return samples
-    
-    def generate_censorship_samples(self, count: int = 80) -> List[List[float]]:
+
+    def generate_censorship_samples(self, count: int = 80) -> list[list[float]]:
         """Generate censorship behavior samples."""
         samples = []
-        
+
         for _ in range(count):
             # Choose random censorship pattern
             pattern_name = np.random.choice(list(self.censorship_patterns.keys()))
             pattern = self.censorship_patterns[pattern_name]
-            
+
             # Base normal conditions
             base_latency = 0.05
             base_throughput = 20.0
-            
+
             # Apply censorship effects
             sample = [
                 base_latency + pattern['latency_increase'] + np.random.normal(0, 0.02),
@@ -156,24 +156,24 @@ class RealTrainingDataProvider:
                 base_throughput * (1 - pattern['throughput_drop']) * 0.3
             ]
             samples.append(sample)
-        
+
         return samples
-    
-    def get_labeled_dataset(self) -> Tuple[List[List[float]], List[int]]:
+
+    def get_labeled_dataset(self) -> tuple[list[list[float]], list[int]]:
         """Get complete labeled dataset for training."""
         normal_samples = self.generate_normal_samples(150)
         censorship_samples = self.generate_censorship_samples(100)
-        
+
         # Combine and label
         all_samples = normal_samples + censorship_samples
         labels = [0] * len(normal_samples) + [1] * len(censorship_samples)
-        
+
         return all_samples, labels
-    
+
     def save_dataset(self, filename: str):
         """Save dataset to JSON file."""
         samples, labels = self.get_labeled_dataset()
-        
+
         dataset = {
             'features': samples,
             'labels': labels,
@@ -186,15 +186,15 @@ class RealTrainingDataProvider:
             'censorship_patterns': self.censorship_patterns,
             'normal_patterns': self.normal_patterns
         }
-        
+
         with open(filename, 'w') as f:
             json.dump(dataset, f, indent=2)
-    
-    def load_dataset(self, filename: str) -> Tuple[List[List[float]], List[int]]:
+
+    def load_dataset(self, filename: str) -> tuple[list[list[float]], list[int]]:
         """Load dataset from JSON file."""
         with open(filename, 'r') as f:
             dataset = json.load(f)
-        
+
         return dataset['features'], dataset['labels']
 
 
@@ -240,28 +240,28 @@ THROTTLING_PATTERNS = {
 if __name__ == "__main__":
     # Generate and save real training data
     provider = RealTrainingDataProvider()
-    
+
     print("Generating real-world training data...")
     samples, labels = provider.get_labeled_dataset()
-    
+
     print(f"Generated {len(samples)} samples:")
     print(f"  - Normal traffic: {labels.count(0)} samples")
     print(f"  - Censorship patterns: {labels.count(1)} samples")
-    
+
     # Save to file
     provider.save_dataset('data/real_censorship_dataset.json')
     print("Dataset saved to 'data/real_censorship_dataset.json'")
-    
+
     # Display sample statistics
     normal_samples = [samples[i] for i, label in enumerate(labels) if label == 0]
     censorship_samples = [samples[i] for i, label in enumerate(labels) if label == 1]
-    
+
     print("\nNormal traffic statistics:")
     normal_array = np.array(normal_samples)
     print(f"  Average latency: {np.mean(normal_array[:, 0]):.3f}s")
     print(f"  Average throughput: {np.mean(normal_array[:, 2]):.1f} MB/s")
     print(f"  Average success rate: {np.mean(normal_array[:, 3]):.2f}")
-    
+
     print("\nCensorship traffic statistics:")
     censorship_array = np.array(censorship_samples)
     print(f"  Average latency: {np.mean(censorship_array[:, 0]):.3f}s")
