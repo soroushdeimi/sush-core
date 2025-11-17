@@ -8,18 +8,14 @@ from pathlib import Path
 
 def run_command(cmd: list[str], description: str, check: bool = True) -> bool:
     """Run a command and return success status."""
-    print(f"\n{'=' * 60}")
+    separator = "=" * 60
+    print(f"\n{separator}")
     print(f"Running: {description}")
     print(f"Command: {' '.join(cmd)}")
-    print(f"{'=' * 60}")
+    print(f"{separator}")
 
     try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            cwd=Path(__file__).parent,
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=Path(__file__).parent)
 
         if result.stdout:
             print("STDOUT:")
@@ -86,9 +82,10 @@ def main():
     )
 
     # Summary
-    print("\n" + "=" * 60)
+    separator = "=" * 60
+    print(f"\n{separator}")
     print("CI Check Summary")
-    print("=" * 60)
+    print(separator)
 
     passed = sum(results)
     total = len(results)
@@ -118,4 +115,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-
