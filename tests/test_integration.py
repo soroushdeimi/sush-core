@@ -208,8 +208,8 @@ async def test_end_to_end_integration():
     recovered = await obfuscator.deobfuscate_data(session_id, obfuscated_packets)
     assert recovered == original
 
-    transport.configure({"enable_steganography": False})
-    metrics = transport.get_performance_metrics()
+    await transport.configure({"enable_steganography": False})
+    metrics = await transport.get_performance_metrics()
     assert isinstance(metrics, dict)
 
     print("End-to-End Integration - PASSED\n")

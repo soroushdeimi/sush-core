@@ -318,12 +318,10 @@ class AdaptiveTransport:
     async def get_performance_metrics(self) -> dict[str, Any]:
         """Expose metrics for the adaptive control loop."""
         return {
-            "mode": self.config.mode.name,
-            "packets_sent": self.transport_stats["packets_sent"],
-            "packets_received": self.transport_stats["packets_received"],
-            "steganography_enabled": self._steganography_enabled,
+            "avg_latency": 0.0,
+            "throughput": 0.0,
+            "success_rate": 1.0,
             "aggressiveness": self._aggressiveness,
-            "hopping_enabled": self.config.enable_hopping,
         }
 
     def adapt_to_conditions(self, network_conditions: dict[str, Any]):
@@ -358,19 +356,6 @@ class AdaptiveTransport:
             },
             "aggressiveness": self._aggressiveness,
             "steganography_enabled": self._steganography_enabled,
-        }
-
-    def get_status(self) -> dict[str, Any]:
-        """Alias for get_statistics for compatibility."""
-        return self.get_statistics()
-
-    def get_performance_metrics(self) -> dict[str, float]:
-        """Return lightweight performance metrics for adaptive control."""
-        return {
-            "avg_latency": 0.0,
-            "throughput": 0.0,
-            "success_rate": 1.0,
-            "aggressiveness": self._aggressiveness,
         }
 
     def get_status(self) -> dict[str, Any]:
