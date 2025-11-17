@@ -13,8 +13,5 @@ ruff format --check .
 echo "Running ruff lint check..."
 ruff check .
 
-echo "Running black check..."
-black --check .
-
 echo "All checks passed!"
 

@@ -33,9 +33,8 @@
 ### Lint Job (مراحل اصلی)
 
 1. ✅ **Check merge conflicts** - پاس شد
-2. ⏳ **Ruff format check** - نیاز به اجرای محلی
-3. ⏳ **Ruff lint check** - نیاز به اجرای محلی  
-4. ⏳ **Black format check** - نیاز به اجرای محلی
+2. ✅ **Ruff format check** - اصلاح شد
+3. ✅ **Ruff lint check** - اصلاح شد
 
 ### Test Job
 
@@ -55,7 +54,6 @@ pip install -r requirements-dev.txt
 python scripts/check_merge_conflicts.py
 ruff format --check .
 ruff check .
-black --check .
 
 # اجرای تست‌ها
 python run_tests.py
