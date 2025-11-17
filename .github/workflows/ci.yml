@@ -36,10 +36,7 @@ jobs:
 
       - name: Check for merge conflicts
         run: |
-          if grep -r "^<<<<<<< " . --include="*.py" || grep -r "^>>>>>>> " . --include="*.py"; then
-            echo "Error: Merge conflict markers found in code"
-            exit 1
-          fi
+          python scripts/check_merge_conflicts.py
 
       - name: Run Ruff format check
         continue-on-error: false
