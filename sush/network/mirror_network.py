@@ -1,4 +1,3 @@
-<<<<<<< Current (Your changes)
 """
 MirrorNet Network - Simplified distributed network coordination
 """
@@ -28,6 +27,7 @@ class NetworkStatus(Enum):
 @dataclass
 class NodeInfo:
     """Information about a network node."""
+
     node_id: str
     node_type: str
     host: str
@@ -260,7 +260,9 @@ class MirrorNetwork:
                         successful_connections += 1
                         self.stats["nodes_discovered"] += 1
                 except Exception as exc:
-                    self.logger.warning(f"Failed to connect to bootstrap node {node_address}: {exc}")
+                    self.logger.warning(
+                        f"Failed to connect to bootstrap node {node_address}: {exc}"
+                    )
 
             if successful_connections:
                 self.status = NetworkStatus.OPERATIONAL
@@ -512,9 +514,7 @@ class MirrorNetwork:
         active_nodes = len(
             [node for node in self.known_nodes.values() if time.time() - node.last_seen < 300]
         )
-        self.status = (
-            NetworkStatus.DEGRADED if active_nodes < 3 else NetworkStatus.OPERATIONAL
-        )
+        self.status = NetworkStatus.DEGRADED if active_nodes < 3 else NetworkStatus.OPERATIONAL
 
     async def _circuit_maintenance_loop(self) -> None:
         while self.running:
@@ -640,5 +640,3 @@ class MirrorNetwork:
 
         self.status = NetworkStatus.BOOTSTRAPPING
         self.logger.info("MirrorNet shutdown complete")
-=======
->>>>>>> Incoming (Background Agent changes)

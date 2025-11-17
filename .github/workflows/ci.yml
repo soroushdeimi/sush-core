@@ -34,14 +34,24 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
 
+      - name: Check for merge conflicts
+        run: |
+          if grep -r "<<<<<<< " . --include="*.py" || grep -r "=======" . --include="*.py" | grep -v "== " || grep -r ">>>>>>> " . --include="*.py"; then
+            echo "Error: Merge conflict markers found in code"
+            exit 1
+          fi
+
       - name: Run Ruff format check
-        run: ruff format --check .
+        continue-on-error: false
+        run: ruff format --check . || (echo "Formatting issues found. Run 'ruff format .' to fix." && exit 1)
 
       - name: Run Ruff lint
-        run: ruff check .
+        continue-on-error: false
+        run: ruff check . || (echo "Linting issues found. Run 'ruff check --fix .' to auto-fix some issues." && exit 1)
 
       - name: Run Black (check only)
-        run: black --check .
+        continue-on-error: false
+        run: black --check . || (echo "Black formatting issues found. Run 'black .' to fix." && exit 1)
 
   test:
     name: Test suite
