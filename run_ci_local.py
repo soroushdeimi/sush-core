@@ -12,23 +12,23 @@ def run_command(cmd: list[str], description: str, check: bool = True) -> bool:
     print(f"Running: {description}")
     print(f"Command: {' '.join(cmd)}")
     print(f"{'='*60}")
-    
+
     try:
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            cwd=Path(__file__).parent
+            cwd=Path(__file__).parent,
         )
-        
+
         if result.stdout:
             print("STDOUT:")
             print(result.stdout)
-        
+
         if result.stderr:
             print("STDERR:")
             print(result.stderr)
-        
+
         if result.returncode == 0:
             print(f"\n✓ PASSED: {description}")
             return True
@@ -52,12 +52,12 @@ def run_command(cmd: list[str], description: str, check: bool = True) -> bool:
 
 def main():
     """Run CI checks locally."""
-    print("="*60)
+    print("=" * 60)
     print("sushCore Local CI Check")
-    print("="*60)
-    
+    print("=" * 60)
+
     results = []
-    
+
     # Step 1: Check merge conflicts
     results.append(
         run_command(
@@ -66,7 +66,7 @@ def main():
             check=False
         )
     )
-    
+
     # Step 2: Ruff format check
     results.append(
         run_command(
@@ -75,7 +75,7 @@ def main():
             check=True
         )
     )
-    
+
     # Step 3: Ruff lint check
     results.append(
         run_command(
@@ -84,7 +84,7 @@ def main():
             check=True
         )
     )
-    
+
     # Step 4: Black check
     results.append(
         run_command(
@@ -93,15 +93,15 @@ def main():
             check=True
         )
     )
-    
+
     # Summary
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("CI Check Summary")
-    print("="*60)
-    
+    print("=" * 60)
+
     passed = sum(results)
     total = len(results)
-    
+
     checks = [
         "Merge conflicts check",
         "Ruff format check",
