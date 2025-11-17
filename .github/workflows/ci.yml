@@ -40,15 +40,17 @@ jobs:
 
       - name: Run Ruff format check
         continue-on-error: false
-        run: ruff format --check . || (echo "Formatting issues found. Run 'ruff format .' to fix." && exit 1)
+        run: |
+          echo "Checking code formatting with Ruff..."
+          ruff format --check . || (echo "❌ Formatting issues found. Run 'make format' or 'ruff format .' to fix." && exit 1)
+          echo "✓ Code formatting is correct"
 
       - name: Run Ruff lint
         continue-on-error: false
-        run: ruff check . || (echo "Linting issues found. Run 'ruff check --fix .' to auto-fix some issues." && exit 1)
-
-      - name: Run Black (check only)
-        continue-on-error: false
-        run: black --check . || (echo "Black formatting issues found. Run 'black .' to fix." && exit 1)
+        run: |
+          echo "Checking code quality with Ruff..."
+          ruff check . || (echo "❌ Linting issues found. Run 'make lint-fix' or 'ruff check --fix .' to auto-fix some issues." && exit 1)
+          echo "✓ Code quality checks passed"
 
   test:
     name: Test suite

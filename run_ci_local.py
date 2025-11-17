@@ -85,15 +85,6 @@ def main():
         )
     )
 
-    # Step 4: Black check
-    results.append(
-        run_command(
-            ["black", "--check", "."],
-            "Black format check",
-            check=True
-        )
-    )
-
     # Summary
     print("\n" + "=" * 60)
     print("CI Check Summary")
@@ -106,24 +97,22 @@ def main():
         "Merge conflicts check",
         "Ruff format check",
         "Ruff lint check",
-        "Black format check"
     ]
-    
+
     for i, (check, result) in enumerate(zip(checks, results), 1):
         status = "✓ PASS" if result else "✗ FAIL"
         print(f"{i}. {status}: {check}")
-    
+
     print(f"\nOverall: {passed}/{total} checks passed")
-    
+
     if passed == total:
         print("\n✓ All CI checks passed!")
         return 0
     else:
         print("\n✗ Some CI checks failed")
         print("\nTo fix issues:")
-        print("  - ruff format .")
-        print("  - ruff check --fix .")
-        print("  - black .")
+        print("  - make format      # or: ruff format .")
+        print("  - make lint-fix    # or: ruff check --fix .")
         return 1
 
 

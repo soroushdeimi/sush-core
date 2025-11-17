@@ -1,11 +1,10 @@
 #!/bin/bash
 set -e
 
-echo "Formatting code with ruff and black..."
+echo "Formatting code with Ruff..."
 
 ruff format .
 ruff check --fix .
-black .
 
-echo "Code formatting complete!"
+echo "✓ Code formatting complete!"
 
