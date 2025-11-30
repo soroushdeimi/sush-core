@@ -41,7 +41,7 @@ class AdaptiveCipherSuite:
         self.cipher_profiles = {
             "aes_gcm": CipherProfile("AES-256-GCM", 32, 12, 0.9, 0.8, 0.3),
             "chacha20": CipherProfile("ChaCha20-Poly1305", 32, 12, 0.8, 0.9, 0.7),
-            "aes_ocb": CipherProfile("AES-256-OCB", 32, 15, 0.85, 0.8, 0.8),
+            "aes_ocb": CipherProfile("AES-256-OCB (GCM fallback)", 32, 12, 0.85, 0.8, 0.8),
         }
         self.active_cipher = "aes_gcm"
         self.encryption_key = b""
@@ -184,6 +184,18 @@ class AdaptiveCipherSuite:
     def _encrypt_aes_ocb(
         self, data: bytes, key: bytes, profile: CipherProfile, additional_data: bytes = b""
     ) -> tuple[bytes, bytes]:
+        """
+        Encrypt using AES-OCB mode.
+
+        Note: The cryptography library does not support OCB mode natively.
+        OCB (Offset Codebook Mode) is a patented mode that requires special
+        implementations. For now, we use AES-GCM as a secure alternative.
+        If OCB support is required, consider using pyca/cryptography with
+        OCB extensions or liboqs-python.
+        """
+        # OCB is not available in standard cryptography library
+        # Using GCM as a secure authenticated encryption alternative
+        # TODO: Replace with actual OCB implementation if required
         cipher = AESGCM(key)
         nonce = os.urandom(12)
         ciphertext = cipher.encrypt(nonce, data, additional_data)
@@ -197,12 +209,20 @@ class AdaptiveCipherSuite:
         profile: CipherProfile,
         additional_data: bytes = b"",
     ) -> bytes:
+        """
+        Decrypt using AES-OCB mode.
+
+        Note: Currently uses GCM as OCB is not available in standard library.
+        See _encrypt_aes_ocb for details.
+        """
+        # OCB is not available in standard cryptography library
+        # Using GCM as a secure authenticated encryption alternative
         cipher = AESGCM(key)
         try:
             plaintext = cipher.decrypt(nonce, ciphertext, additional_data)
             return plaintext
         except Exception as e:
-            raise ValueError("AES-GCM decryption failed") from e
+            raise ValueError("AES-GCM decryption failed (OCB fallback)") from e
 
     def get_current_profile_info(self) -> dict:
         profile = self.cipher_profiles[self.active_cipher]

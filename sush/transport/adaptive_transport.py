@@ -251,8 +251,33 @@ class AdaptiveTransport:
                 return data if data else None
             except asyncio.TimeoutError:
                 return None
+        elif connection["type"] == "udp":
+            # Implement proper UDP receiving using asyncio
+            sock = connection["socket"]
+            target = connection.get("target")
 
-        # UDP receive would require more complex implementation
+            try:
+                # Use asyncio to receive UDP data with timeout
+                loop = asyncio.get_event_loop()
+                data, addr = await asyncio.wait_for(
+                    loop.sock_recvfrom(sock, 65535),  # Max UDP packet size
+                    timeout=timeout,
+                )
+
+                # Verify the packet came from the expected target (if specified)
+                if target and addr != target:
+                    self.logger.warning(
+                        f"Received UDP packet from unexpected address {addr}, expected {target}"
+                    )
+                    # Still return the data, but log the warning
+
+                return data if data else None
+            except asyncio.TimeoutError:
+                return None
+            except OSError as e:
+                self.logger.error(f"UDP receive error: {e}")
+                return None
+
         return None
 
     async def close_connection(self, connection_id: str):

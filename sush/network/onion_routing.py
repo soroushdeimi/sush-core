@@ -404,18 +404,39 @@ class OnionRoutingProtocol:
         return hashlib.sha256(combined).digest()
 
     def _generate_key_stream(self, key: bytes, length: int) -> bytes:
-        """Generate key stream for encryption."""
-        # Simple key stream generation (use proper stream cipher in production)
-        stream = b""
-        counter = 0
+        """
+        Generate key stream using AES-256-CTR stream cipher.
 
-        while len(stream) < length:
-            counter_bytes = counter.to_bytes(8, "big")
-            block = hashlib.sha256(key + counter_bytes).digest()
-            stream += block
-            counter += 1
+        Replaced insecure SHA-256 counter-based generation with proper AES-CTR
+        for cryptographic security as per security hardening requirements.
+        """
+        # Ensure key is 32 bytes (256 bits) for AES-256
+        if len(key) < 32:
+            # Derive a 32-byte key using HKDF if needed
+            hkdf = HKDF(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=None,
+                info=b"sushCore-ORPP-keystream",
+                backend=default_backend(),
+            )
+            key = hkdf.derive(key)
+        elif len(key) > 32:
+            key = key[:32]
 
-        return stream[:length]
+        # Use zero IV for counter mode (CTR mode uses counter, not traditional IV)
+        # For keystream generation, we can use a zero nonce since this is deterministic
+        iv = b"\x00" * 16  # 128-bit zero IV for CTR mode
+
+        # Generate keystream by encrypting zeros
+        cipher = Cipher(algorithms.AES(key), modes.CTR(iv), backend=default_backend())
+        encryptor = cipher.encryptor()
+
+        # Encrypt zeros to generate keystream
+        zeros = b"\x00" * length
+        keystream = encryptor.update(zeros) + encryptor.finalize()
+
+        return keystream[:length]
 
     async def send_data(self, circuit_id: int, data: bytes) -> bool:
         """Send data through an established circuit."""
@@ -457,19 +478,84 @@ class OnionRoutingProtocol:
             return False
 
     async def receive_data(self, circuit_id: int, timeout: float = 5.0) -> Optional[bytes]:
-        """Receive data from a circuit."""
+        """
+        Receive data from a circuit by reading from the network connection.
+
+        Connects to the first hop and attempts to receive encrypted cells,
+        then decrypts them through the circuit layers.
+        """
         if circuit_id not in self.circuits:
+            self.logger.error(f"Circuit {circuit_id} not found")
+            return None
+
+        circuit = self.circuits[circuit_id]
+
+        if circuit.state != CircuitState.ESTABLISHED:
+            self.logger.error(f"Circuit {circuit_id} not in established state")
             return None
 
         try:
-            # In real implementation, would listen for incoming cells
-            # For now, simulate receiving data
-            await asyncio.sleep(0.1)  # Simulate network delay
+            # Get first hop node info
+            first_node = circuit.path[0]
+            if first_node not in self.known_nodes:
+                self.logger.error(f"Unknown first hop node: {first_node}")
+                return None
 
-            # Would receive encrypted cell and decrypt through layers
-            # This is a placeholder implementation
+            node_info = self.known_nodes[first_node]
+            address = node_info.get("address", "localhost")
+            port = node_info.get("port", 8080)
 
-            return None  # No data received in simulation
+            # Establish connection to first hop to receive data
+            try:
+                reader, writer = await asyncio.wait_for(
+                    asyncio.open_connection(address, port), timeout=timeout
+                )
+
+                try:
+                    # Wait for incoming cell with timeout
+                    # Read length prefix
+                    response_length_data = await asyncio.wait_for(
+                        reader.readexactly(4), timeout=timeout
+                    )
+                    response_length = struct.unpack("!I", response_length_data)[0]
+
+                    # Read cell data
+                    cell_data = await asyncio.wait_for(
+                        reader.readexactly(response_length), timeout=timeout
+                    )
+
+                    # Deserialize cell
+                    received_cell = self._deserialize_cell(cell_data)
+
+                    # Check if this is a RELAY cell for our circuit
+                    if (
+                        received_cell.circuit_id == circuit_id
+                        and received_cell.command == CellType.RELAY
+                        and received_cell.encrypted
+                    ):
+                        # Decrypt through circuit layers
+                        decrypted_data = self._decrypt_through_layers(
+                            circuit, received_cell.payload
+                        )
+
+                        circuit.last_activity = time.time()
+                        self.stats["cells_processed"] += 1
+                        self.stats["bytes_relayed"] += len(decrypted_data)
+
+                        return decrypted_data
+                    else:
+                        self.logger.debug(
+                            f"Received non-RELAY cell or wrong circuit: {received_cell.command}"
+                        )
+                        return None
+
+                finally:
+                    writer.close()
+                    await writer.wait_closed()
+
+            except (ConnectionRefusedError, asyncio.TimeoutError) as e:
+                self.logger.warning(f"Connection to {first_node} ({address}:{port}) failed: {e}")
+                return None
 
         except Exception as e:
             self.logger.error(f"Error receiving data from circuit {circuit_id}: {e}")

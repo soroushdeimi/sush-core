@@ -169,7 +169,9 @@ class SimplifiedNodeIntegrity:
                 return False
             node_record = self.node_registry[target_node]
             node_record.endorsements.add(self.node_id)
-            endorser_rep = self.node_registry.get(self.node_id, NodeRecord).reputation_score
+            # Handle missing endorser case explicitly
+            record = self.node_registry.get(self.node_id)
+            endorser_rep = record.reputation_score if record else 0.5  # Default value
             boost = min(0.1, endorser_rep * 0.1)
             node_record.reputation_score = min(
                 self.max_reputation, node_record.reputation_score + boost

@@ -15,34 +15,14 @@ except ImportError:
         import kyber_py
 
         Kyber768 = kyber_py.Kyber768
-    except (ImportError, AttributeError):  # Mock implementation for testing
-        import hashlib
-        import secrets
-
-        class MockKyber768:
-            @staticmethod
-            def keygen():
-                # Mock key generation
-                public_key = secrets.token_bytes(1184)
-                private_key = secrets.token_bytes(2400)
-                return public_key, private_key
-
-            @staticmethod
-            def encaps(public_key):
-                # Mock encapsulation
-                shared_secret = hashlib.sha256(public_key[:32]).digest()
-                ciphertext = secrets.token_bytes(1088)
-                ciphertext = shared_secret[:32] + ciphertext[32:]
-                return ciphertext, shared_secret
-
-            @staticmethod
-            def decaps(ciphertext, private_key):
-                # Mock decapsulation
-                shared_secret = ciphertext[:32]
-                return shared_secret
-
-        Kyber768 = MockKyber768
-        logger.debug("Using mock ML-KEM implementation; install kyber-py for production use.")
+    except (ImportError, AttributeError):
+        # Fail loud if dependency is missing rather than silently using insecure mock
+        raise ImportError(
+            "kyber-py is required for ML-KEM key exchange. "
+            "Install it with: pip install kyber-py>=0.1.0\n"
+            "Note: kyber-py is marked for educational use only. "
+            "For production, consider using liboqs-python or pyca/cryptography once ML-KEM is fully supported."
+        ) from None
 
 
 class MLKEMKeyExchange:

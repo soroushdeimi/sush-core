@@ -185,27 +185,99 @@ class TTLChannel(SteganographicChannel):
         """
         Extract data from received packets by analyzing TTL values.
 
-        This would require packet capture capabilities in a real implementation.
-        For now, returns a placeholder.
+        Implements packet capture using scapy or raw sockets to read TTL values
+        from incoming IP packets and decode the hidden data.
         """
-        # In a real implementation, this would:
-        # 1. Capture incoming packets
-        # 2. Extract TTL values
-        # 3. Decode bits from TTL variations
-        # 4. Reconstruct original data
+        if not SCAPY_AVAILABLE:
+            # Fallback implementation using raw sockets
+            return await self._receive_data_fallback()
 
-        # Placeholder implementation
-        if len(self.received_bits) >= 8:
-            # Convert bits to bytes
-            byte_value = 0
-            for i in range(8):
-                if i < len(self.received_bits):
-                    byte_value |= self.received_bits[i] << i
+        try:
+            # Use scapy to sniff packets and extract TTL values
+            from scapy.all import sniff, IP
 
-            self.received_bits = self.received_bits[8:]
-            return bytes([byte_value])
+            # Sniff a single packet with timeout
+            packets = sniff(count=1, timeout=1.0, filter="ip", store=True)
 
-        return None
+            if not packets:
+                return None
+
+            packet = packets[0]
+            if IP in packet:
+                ttl = packet[IP].ttl
+                bit = self._extract_bit_from_ttl(ttl)
+
+                if bit is not None:
+                    self.received_bits.append(bit)
+
+                    # When we have 8 bits, convert to byte
+                    if len(self.received_bits) >= 8:
+                        byte_value = 0
+                        for i in range(8):
+                            if i < len(self.received_bits):
+                                byte_value |= self.received_bits[i] << i
+
+                        self.received_bits = self.received_bits[8:]
+                        return bytes([byte_value])
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error in TTL channel receive: {e}")
+            return None
+
+    async def _receive_data_fallback(self) -> Optional[bytes]:
+        """
+        Fallback implementation using raw sockets when scapy is not available.
+        Requires root/administrator privileges.
+        """
+        try:
+            import struct
+
+            # Create raw socket to capture IP packets
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
+                sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+                sock.setblocking(False)
+            except PermissionError:
+                logger.warning("Raw socket requires root privileges for TTL channel receive")
+                return None
+
+            # Try to receive a packet with timeout
+            loop = asyncio.get_event_loop()
+            try:
+                packet_data, addr = await asyncio.wait_for(
+                    loop.sock_recvfrom(sock, 65535), timeout=1.0
+                )
+
+                # Parse IP header to extract TTL (byte 8 in IP header)
+                if len(packet_data) >= 20:  # Minimum IP header size
+                    ttl = packet_data[8]
+                    bit = self._extract_bit_from_ttl(ttl)
+
+                    if bit is not None:
+                        self.received_bits.append(bit)
+
+                        # When we have 8 bits, convert to byte
+                        if len(self.received_bits) >= 8:
+                            byte_value = 0
+                            for i in range(8):
+                                if i < len(self.received_bits):
+                                    byte_value |= self.received_bits[i] << i
+
+                            self.received_bits = self.received_bits[8:]
+                            return bytes([byte_value])
+
+            except asyncio.TimeoutError:
+                pass
+            finally:
+                sock.close()
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error in TTL fallback receive: {e}")
+            return None
 
     def _extract_bit_from_ttl(self, ttl: int) -> Optional[int]:
         """Extract hidden bit from TTL value."""
@@ -219,6 +291,8 @@ class DNSChannel(SteganographicChannel):
 
     def __init__(self):
         self.domain_base = "example.com"
+        self.received_queries = []
+        self.query_buffer = bytearray()
 
     async def send_data(self, data: bytes, target: str) -> bool:
         """Send data in DNS subdomain."""
@@ -238,9 +312,60 @@ class DNSChannel(SteganographicChannel):
             return False
 
     async def receive_data(self) -> Optional[bytes]:
-        """Extract data from DNS query logs."""
-        # This would require access to DNS server logs
-        # Simplified implementation
+        """
+        Extract data from DNS query logs or by monitoring DNS traffic.
+
+        In a real implementation, this would:
+        1. Monitor DNS queries (via DNS server logs, packet capture, or DNS monitoring)
+        2. Extract subdomain data from queries matching our domain pattern
+        3. Decode hex data from subdomain names
+        4. Return reconstructed bytes
+        """
+        # Check if we have buffered data
+        if len(self.query_buffer) > 0:
+            # Return first available chunk
+            data = bytes(self.query_buffer)
+            self.query_buffer = bytearray()
+            return data
+
+        # In production, this would monitor DNS queries
+        # For now, we can use a DNS packet sniffer if scapy is available
+        if SCAPY_AVAILABLE:
+            try:
+                from scapy.all import sniff, DNS, IP
+
+                # Sniff DNS packets with timeout
+                packets = sniff(count=1, timeout=1.0, filter="udp port 53", store=True)
+
+                if not packets:
+                    return None
+
+                packet = packets[0]
+                if DNS in packet and packet[DNS].qr == 0:  # DNS query (not response)
+                    qname = packet[DNS].qname.decode("utf-8", errors="ignore").rstrip(".")
+
+                    # Check if query matches our domain pattern
+                    if self.domain_base in qname:
+                        # Extract hex data from subdomain
+                        subdomain = qname.split(".")[0]
+                        try:
+                            # Try to decode hex data
+                            hex_data = subdomain
+                            decoded = bytes.fromhex(hex_data)
+                            return decoded
+                        except ValueError:
+                            # Not valid hex, skip
+                            pass
+
+            except Exception as e:
+                logger.debug(f"Error in DNS channel receive: {e}")
+
+        # Alternative: Monitor local DNS cache or query logs
+        # This would require platform-specific implementations
+        # For Windows: Could monitor DNS cache via ipconfig /displaydns
+        # For Linux: Could monitor /var/log/syslog or systemd-resolved logs
+        # For now, return None if no data available
+
         return None
 
 
