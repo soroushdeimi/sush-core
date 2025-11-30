@@ -18,3 +18,4 @@ python-dotenv>=1.0.0
 dnspython>=2.3.0
 matplotlib>=3.7.0
 pandas>=2.0.0
+ruff
