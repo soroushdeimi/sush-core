@@ -1,280 +1,383 @@
-#!/usr/bin/env python3
 """
-Real-world training data for SpectralFlow ML models.
-Contains actual network censorship patterns and normal traffic signatures.
+Generate realistic training data for censorship detection models.
+
+This module generates synthetic network metrics that mimic real-world
+censorship patterns based on research and observed behaviors.
 """
 
-import json
+import time
+from typing import Tuple
 
 import numpy as np
 
+from sush.control.censorship_detector import NetworkMetrics
+
 
 class RealTrainingDataProvider:
-    """Provides real-world training data for censorship detection."""
+    """Generates realistic training data for censorship detection."""
 
-    def __init__(self):
-        # Real censorship patterns observed in various countries
-        self.censorship_patterns = {
-            "iran_dpi": {
-                "description": "DPI filtering in Iran targeting encrypted protocols",
-                "latency_increase": 0.15,  # 150ms additional latency
-                "packet_loss": 0.12,  # 12% packet loss
-                "throughput_drop": 0.6,  # 60% throughput reduction
-                "rst_packets": 25,  # High RST packet count
-                "success_rate": 0.3,  # 30% connection success
-                "jitter": 0.08,  # High jitter
-            },
-            "china_gfw": {
-                "description": "Great Firewall patterns",
-                "latency_increase": 0.08,
-                "packet_loss": 0.08,
-                "throughput_drop": 0.7,
-                "rst_packets": 15,
-                "success_rate": 0.4,
-                "jitter": 0.05,
-            },
-            "russia_throttling": {
-                "description": "Bandwidth throttling patterns",
-                "latency_increase": 0.12,
-                "packet_loss": 0.06,
-                "throughput_drop": 0.8,
-                "rst_packets": 8,
-                "success_rate": 0.6,
-                "jitter": 0.04,
-            },
-            "turkey_dns_poison": {
-                "description": "DNS poisoning attacks",
-                "latency_increase": 0.05,
-                "packet_loss": 0.03,
-                "throughput_drop": 0.9,
-                "rst_packets": 3,
-                "success_rate": 0.1,  # Very low due to DNS failures
-                "jitter": 0.02,
-            },
-        }
+    def __init__(self, random_seed: int = 42):
+        """Initialize the data provider with a random seed for reproducibility."""
+        np.random.seed(random_seed)
 
-        # Normal network conditions from various regions
-        self.normal_patterns = {
-            "high_speed_fiber": {
-                "latency": 0.02,  # 20ms
-                "packet_loss": 0.001,
-                "throughput": 50.0,  # 50 MB/s
-                "success_rate": 0.98,
-                "rst_packets": 1,
-                "jitter": 0.005,
-            },
-            "mobile_4g": {
-                "latency": 0.08,  # 80ms
-                "packet_loss": 0.02,
-                "throughput": 15.0,
-                "success_rate": 0.92,
-                "rst_packets": 3,
-                "jitter": 0.02,
-            },
-            "cable_broadband": {
-                "latency": 0.04,  # 40ms
-                "packet_loss": 0.005,
-                "throughput": 25.0,
-                "success_rate": 0.95,
-                "rst_packets": 2,
-                "jitter": 0.01,
-            },
-            "satellite": {
-                "latency": 0.6,  # 600ms
-                "packet_loss": 0.03,
-                "throughput": 8.0,
-                "success_rate": 0.85,
-                "rst_packets": 5,
-                "jitter": 0.05,
-            },
-        }
+    def generate_dataset(
+        self, num_samples: int = 10000
+    ) -> Tuple[list[list[float]], list[int]]:
+        """
+        Generate a complete dataset with realistic censorship patterns.
 
-    def generate_normal_samples(self, count: int = 100) -> list[list[float]]:
-        """Generate normal network behavior samples."""
-        samples = []
+        Args:
+            num_samples: Total number of samples to generate
 
-        for _ in range(count):
-            # Choose random normal pattern
-            pattern_name = np.random.choice(list(self.normal_patterns.keys()))
-            pattern = self.normal_patterns[pattern_name]
+        Returns:
+            Tuple of (features_list, labels_list) where:
+            - features_list: List of feature vectors (15 features each)
+            - labels_list: List of labels (0=normal, 1=threat)
+        """
+        normal_samples = num_samples // 2
+        threat_samples = num_samples - normal_samples
 
-            # Add realistic variations
-            sample = [
-                max(0.001, np.random.normal(pattern["latency"], pattern["latency"] * 0.3)),
-                max(0.0, np.random.normal(pattern["packet_loss"], 0.01)),
-                max(0.1, np.random.normal(pattern["throughput"], pattern["throughput"] * 0.2)),
-                min(1.0, max(0.7, np.random.normal(pattern["success_rate"], 0.05))),
-                max(0, np.random.poisson(pattern["rst_packets"])),
-                max(0, np.random.poisson(pattern["rst_packets"] + 1)),
-                max(0.001, np.random.normal(pattern["jitter"], pattern["jitter"] * 0.5)),
-                np.random.normal(0.5, 0.2),  # bandwidth_utilization
-                # Delta features (small changes in normal conditions)
-                np.random.normal(0, 0.01),
-                np.random.normal(0, 1.0),
-                np.random.normal(0, 0.005),
-                # Statistical features
-                pattern["latency"],
-                pattern["latency"] * 0.1,
-                pattern["throughput"],
-                pattern["throughput"] * 0.1,
-            ]
-            samples.append(sample)
+        normal_features = self._generate_normal_patterns(normal_samples)
+        threat_features = self._generate_threat_patterns(threat_samples)
 
-        return samples
+        all_features = normal_features + threat_features
+        all_labels = [0] * len(normal_features) + [1] * len(threat_features)
 
-    def generate_censorship_samples(self, count: int = 80) -> list[list[float]]:
-        """Generate censorship behavior samples."""
-        samples = []
+        return all_features, all_labels
 
-        for _ in range(count):
-            # Choose random censorship pattern
-            pattern_name = np.random.choice(list(self.censorship_patterns.keys()))
-            pattern = self.censorship_patterns[pattern_name]
+    def _generate_normal_patterns(self, num_samples: int) -> list[list[float]]:
+        """
+        Generate normal network behavior patterns.
 
-            # Base normal conditions
-            base_latency = 0.05
-            base_throughput = 20.0
+        Characteristics:
+        - Low latency (20-100ms)
+        - Low packet loss (<1%)
+        - Good throughput (5-20 MB/s)
+        - High connection success rate (>95%)
+        - Low jitter (<10ms)
+        """
+        features = []
 
-            # Apply censorship effects
-            sample = [
-                base_latency + pattern["latency_increase"] + np.random.normal(0, 0.02),
-                pattern["packet_loss"] + np.random.normal(0, 0.02),
-                base_throughput * pattern["throughput_drop"] + np.random.normal(0, 2.0),
-                pattern["success_rate"] + np.random.normal(0, 0.1),
-                pattern["rst_packets"] + np.random.poisson(5),
-                pattern["rst_packets"] + np.random.poisson(8),
-                pattern["jitter"] + np.random.normal(0, 0.01),
-                np.random.normal(0.8, 0.1),  # High bandwidth usage during attack
-                # Delta features (significant changes during censorship)
-                np.random.normal(pattern["latency_increase"], 0.05),
-                np.random.normal(-base_throughput * (1 - pattern["throughput_drop"]), 5.0),
-                np.random.normal(pattern["packet_loss"], 0.02),
-                # Statistical features
-                base_latency + pattern["latency_increase"],
-                pattern["latency_increase"] * 0.5,
-                base_throughput * pattern["throughput_drop"],
-                base_throughput * (1 - pattern["throughput_drop"]) * 0.3,
-            ]
-            samples.append(sample)
+        for _ in range(num_samples):
+            base_time = time.time()
 
-        return samples
+            # Base metrics (normal network conditions)
+            latency = np.random.normal(0.05, 0.02)  # 20-100ms average
+            latency = max(0.01, min(0.2, latency))  # Clamp to reasonable range
 
-    def get_labeled_dataset(self) -> tuple[list[list[float]], list[int]]:
-        """Get complete labeled dataset for training."""
-        normal_samples = self.generate_normal_samples(150)
-        censorship_samples = self.generate_censorship_samples(100)
+            packet_loss = np.random.exponential(0.005)  # Low loss rate
+            packet_loss = min(0.05, packet_loss)  # Max 5%
 
-        # Combine and label
-        all_samples = normal_samples + censorship_samples
-        labels = [0] * len(normal_samples) + [1] * len(censorship_samples)
+            throughput = np.random.normal(10.0, 3.0)  # 5-20 MB/s
+            throughput = max(1.0, throughput)  # Min 1 MB/s
 
-        return all_samples, labels
+            connection_success_rate = np.random.normal(0.97, 0.02)  # High success
+            connection_success_rate = max(0.9, min(1.0, connection_success_rate))
 
-    def save_dataset(self, filename: str):
-        """Save dataset to JSON file."""
-        samples, labels = self.get_labeled_dataset()
+            rst_packets = np.random.poisson(1)  # Very few RST packets
+            retransmissions = np.random.poisson(2)  # Few retransmissions
 
-        dataset = {
-            "features": samples,
-            "labels": labels,
-            "feature_names": [
-                "latency",
-                "packet_loss",
-                "throughput",
-                "connection_success_rate",
-                "rst_packets",
-                "retransmissions",
-                "jitter",
-                "bandwidth_utilization",
-                "latency_delta",
-                "throughput_delta",
-                "packet_loss_delta",
-                "avg_latency",
-                "latency_std",
-                "avg_throughput",
-                "throughput_std",
-            ],
-            "censorship_patterns": self.censorship_patterns,
-            "normal_patterns": self.normal_patterns,
-        }
+            jitter = np.random.exponential(0.005)  # Low jitter
+            jitter = min(0.01, jitter)  # Max 10ms
 
-        with open(filename, "w") as f:
-            json.dump(dataset, f, indent=2)
+            bandwidth_utilization = np.random.normal(0.4, 0.15)  # Moderate usage
+            bandwidth_utilization = max(0.1, min(0.8, bandwidth_utilization))
 
-    def load_dataset(self, filename: str) -> tuple[list[list[float]], list[int]]:
-        """Load dataset from JSON file."""
-        with open(filename) as f:
-            dataset = json.load(f)
+            # Create NetworkMetrics object to extract features properly
+            metrics = NetworkMetrics(
+                timestamp=base_time,
+                latency=latency,
+                packet_loss=packet_loss,
+                throughput=throughput,
+                connection_success_rate=connection_success_rate,
+                rst_packets=rst_packets,
+                retransmissions=retransmissions,
+                jitter=jitter,
+                bandwidth_utilization=bandwidth_utilization,
+            )
 
-        return dataset["features"], dataset["labels"]
+            # Extract features (15 features total)
+            feature_vector = self._extract_features(metrics, [metrics])
+            features.append(feature_vector)
 
+        return features
 
-# Real-world VPN detection signatures
-VPN_SIGNATURES = {
-    "openvpn_udp": {
-        "packet_sizes": [1500, 1400, 1300],
-        "timing_patterns": [0.1, 0.15, 0.12],
-        "entropy_score": 0.95,
-    },
-    "wireguard": {
-        "packet_sizes": [1420, 1280, 148],
-        "timing_patterns": [0.05, 0.08, 0.06],
-        "entropy_score": 0.98,
-    },
-    "shadowsocks": {
-        "packet_sizes": [1400, 1200, 800],
-        "timing_patterns": [0.08, 0.12, 0.1],
-        "entropy_score": 0.92,
-    },
-}
+    def _generate_threat_patterns(self, num_samples: int) -> list[list[float]]:
+        """
+        Generate threat patterns mimicking real censorship techniques.
 
-# ISP throttling patterns
-THROTTLING_PATTERNS = {
-    "time_based": {
-        "peak_hours": [18, 19, 20, 21, 22],
-        "throttle_ratio": 0.5,
-        "detection_delay": 300,  # 5 minutes
-    },
-    "protocol_based": {
-        "target_ports": [80, 443, 993, 995],
-        "throttle_ratio": 0.3,
-        "detection_delay": 60,
-    },
-    "traffic_shaping": {
-        "burst_allowance": 10.0,  # MB
-        "sustained_rate": 2.0,  # MB/s
-        "detection_delay": 120,
-    },
-}
+        Includes:
+        - GFW Pattern: Random packet loss + High TCP Reset rate
+        - Throttling Pattern: Low throughput + Normal latency
+        - DPI Pattern: High latency (processing delay) + Connection drops
+        - Mixed patterns
+        """
+        features = []
 
+        # Distribute samples across different threat types
+        gfw_samples = num_samples // 4
+        throttling_samples = num_samples // 4
+        dpi_samples = num_samples // 4
+        mixed_samples = num_samples - (gfw_samples + throttling_samples + dpi_samples)
 
-if __name__ == "__main__":
-    # Generate and save real training data
-    provider = RealTrainingDataProvider()
+        # GFW Pattern: Random packet loss + High TCP Reset rate
+        features.extend(self._generate_gfw_pattern(gfw_samples))
 
-    print("Generating real-world training data...")
-    samples, labels = provider.get_labeled_dataset()
+        # Throttling Pattern: Low throughput + Normal latency
+        features.extend(self._generate_throttling_pattern(throttling_samples))
 
-    print(f"Generated {len(samples)} samples:")
-    print(f"  - Normal traffic: {labels.count(0)} samples")
-    print(f"  - Censorship patterns: {labels.count(1)} samples")
+        # DPI Pattern: High latency + Connection drops after handshake
+        features.extend(self._generate_dpi_pattern(dpi_samples))
 
-    # Save to file
-    provider.save_dataset("data/real_censorship_dataset.json")
-    print("Dataset saved to 'data/real_censorship_dataset.json'")
+        # Mixed patterns (combination of multiple techniques)
+        features.extend(self._generate_mixed_pattern(mixed_samples))
 
-    # Display sample statistics
-    normal_samples = [samples[i] for i, label in enumerate(labels) if label == 0]
-    censorship_samples = [samples[i] for i, label in enumerate(labels) if label == 1]
+        return features
 
-    print("\nNormal traffic statistics:")
-    normal_array = np.array(normal_samples)
-    print(f"  Average latency: {np.mean(normal_array[:, 0]):.3f}s")
-    print(f"  Average throughput: {np.mean(normal_array[:, 2]):.1f} MB/s")
-    print(f"  Average success rate: {np.mean(normal_array[:, 3]):.2f}")
+    def _generate_gfw_pattern(self, num_samples: int) -> list[list[float]]:
+        """
+        Generate GFW (Great Firewall) pattern.
 
-    print("\nCensorship traffic statistics:")
-    censorship_array = np.array(censorship_samples)
-    print(f"  Average latency: {np.mean(censorship_array[:, 0]):.3f}s")
-    print(f"  Average throughput: {np.mean(censorship_array[:, 2]):.1f} MB/s")
-    print(f"  Average success rate: {np.mean(censorship_array[:, 3]):.2f}")
+        Characteristics:
+        - Random packet loss (5-30%)
+        - High TCP Reset rate (10-50 RST packets)
+        - Normal latency initially, then spikes
+        - Connection success rate drops significantly
+        """
+        features = []
+        base_time = time.time()
+
+        for _ in range(num_samples):
+            # GFW signature: high packet loss + many RST packets
+            latency = np.random.normal(0.15, 0.1)  # Slightly elevated
+            latency = max(0.05, min(0.5, latency))
+
+            packet_loss = np.random.uniform(0.05, 0.3)  # High random loss
+
+            throughput = np.random.normal(3.0, 1.5)  # Reduced throughput
+            throughput = max(0.5, throughput)
+
+            connection_success_rate = np.random.uniform(0.3, 0.7)  # Low success
+
+            rst_packets = np.random.poisson(25)  # Many RST packets (GFW signature)
+            retransmissions = np.random.poisson(20)  # Many retransmissions
+
+            jitter = np.random.uniform(0.02, 0.1)  # Elevated jitter
+            bandwidth_utilization = np.random.normal(0.6, 0.2)
+
+            metrics = NetworkMetrics(
+                timestamp=base_time,
+                latency=latency,
+                packet_loss=packet_loss,
+                throughput=throughput,
+                connection_success_rate=connection_success_rate,
+                rst_packets=rst_packets,
+                retransmissions=retransmissions,
+                jitter=jitter,
+                bandwidth_utilization=bandwidth_utilization,
+            )
+
+            feature_vector = self._extract_features(metrics, [metrics])
+            features.append(feature_vector)
+
+        return features
+
+    def _generate_throttling_pattern(self, num_samples: int) -> list[list[float]]:
+        """
+        Generate traffic throttling pattern.
+
+        Characteristics:
+        - Low throughput (0.5-2 MB/s)
+        - Normal latency (not blocked, just slowed)
+        - Normal packet loss
+        - Connection succeeds but slowly
+        """
+        features = []
+        base_time = time.time()
+
+        for _ in range(num_samples):
+            latency = np.random.normal(0.08, 0.03)  # Normal latency
+            latency = max(0.03, min(0.15, latency))
+
+            packet_loss = np.random.exponential(0.01)  # Normal loss
+            packet_loss = min(0.05, packet_loss)
+
+            throughput = np.random.uniform(0.5, 2.0)  # Low throughput (throttled)
+
+            connection_success_rate = np.random.normal(0.85, 0.1)  # Still connects
+            connection_success_rate = max(0.7, min(0.95, connection_success_rate))
+
+            rst_packets = np.random.poisson(3)  # Few RST packets
+            retransmissions = np.random.poisson(5)  # Some retransmissions
+
+            jitter = np.random.exponential(0.008)  # Slightly elevated
+            jitter = min(0.02, jitter)
+
+            bandwidth_utilization = np.random.normal(0.3, 0.1)  # Low utilization
+
+            metrics = NetworkMetrics(
+                timestamp=base_time,
+                latency=latency,
+                packet_loss=packet_loss,
+                throughput=throughput,
+                connection_success_rate=connection_success_rate,
+                rst_packets=rst_packets,
+                retransmissions=retransmissions,
+                jitter=jitter,
+                bandwidth_utilization=bandwidth_utilization,
+            )
+
+            feature_vector = self._extract_features(metrics, [metrics])
+            features.append(feature_vector)
+
+        return features
+
+    def _generate_dpi_pattern(self, num_samples: int) -> list[list[float]]:
+        """
+        Generate DPI (Deep Packet Inspection) pattern.
+
+        Characteristics:
+        - High latency (processing delay during inspection)
+        - Connection drops after handshake (DPI detected suspicious traffic)
+        - Normal initial metrics, then sudden drop
+        - High jitter (processing delays)
+        """
+        features = []
+        base_time = time.time()
+
+        for _ in range(num_samples):
+            # DPI adds processing delay
+            latency = np.random.normal(0.3, 0.15)  # High latency (processing)
+            latency = max(0.1, min(1.0, latency))
+
+            packet_loss = np.random.uniform(0.1, 0.4)  # High loss after detection
+
+            throughput = np.random.normal(1.5, 1.0)  # Low throughput
+            throughput = max(0.2, throughput)
+
+            # Connection often fails after handshake (DPI detected)
+            connection_success_rate = np.random.uniform(0.2, 0.6)  # Low success
+
+            rst_packets = np.random.poisson(15)  # Moderate RST packets
+            retransmissions = np.random.poisson(25)  # Many retransmissions
+
+            jitter = np.random.uniform(0.05, 0.2)  # High jitter (processing delays)
+            bandwidth_utilization = np.random.normal(0.5, 0.2)
+
+            metrics = NetworkMetrics(
+                timestamp=base_time,
+                latency=latency,
+                packet_loss=packet_loss,
+                throughput=throughput,
+                connection_success_rate=connection_success_rate,
+                rst_packets=rst_packets,
+                retransmissions=retransmissions,
+                jitter=jitter,
+                bandwidth_utilization=bandwidth_utilization,
+            )
+
+            feature_vector = self._extract_features(metrics, [metrics])
+            features.append(feature_vector)
+
+        return features
+
+    def _generate_mixed_pattern(self, num_samples: int) -> list[list[float]]:
+        """
+        Generate mixed threat patterns (combination of techniques).
+
+        Characteristics:
+        - Combination of GFW, throttling, and DPI patterns
+        - More severe overall impact
+        """
+        features = []
+        base_time = time.time()
+
+        for _ in range(num_samples):
+            # Mix of all patterns
+            latency = np.random.normal(0.25, 0.2)  # High latency
+            latency = max(0.1, min(0.8, latency))
+
+            packet_loss = np.random.uniform(0.1, 0.5)  # High loss
+
+            throughput = np.random.uniform(0.3, 1.5)  # Very low throughput
+
+            connection_success_rate = np.random.uniform(0.1, 0.5)  # Very low success
+
+            rst_packets = np.random.poisson(30)  # Many RST packets
+            retransmissions = np.random.poisson(35)  # Many retransmissions
+
+            jitter = np.random.uniform(0.1, 0.3)  # Very high jitter
+            bandwidth_utilization = np.random.normal(0.7, 0.2)  # High utilization
+
+            metrics = NetworkMetrics(
+                timestamp=base_time,
+                latency=latency,
+                packet_loss=packet_loss,
+                throughput=throughput,
+                connection_success_rate=connection_success_rate,
+                rst_packets=rst_packets,
+                retransmissions=retransmissions,
+                jitter=jitter,
+                bandwidth_utilization=bandwidth_utilization,
+            )
+
+            feature_vector = self._extract_features(metrics, [metrics])
+            features.append(feature_vector)
+
+        return features
+
+    def _extract_features(
+        self, metrics: NetworkMetrics, history: list[NetworkMetrics]
+    ) -> list[float]:
+        """
+        Extract feature vector from metrics (matching CensorshipDetector._extract_features).
+
+        Returns 15 features:
+        - 8 base features (latency, packet_loss, throughput, etc.)
+        - 3 delta features (if history available)
+        - 4 statistical features (if history available)
+        """
+        import statistics
+
+        # Base features (8)
+        features = [
+            metrics.latency,
+            metrics.packet_loss,
+            metrics.throughput,
+            metrics.connection_success_rate,
+            float(metrics.rst_packets),
+            float(metrics.retransmissions),
+            metrics.jitter,
+            metrics.bandwidth_utilization,
+        ]
+
+        # Delta features (3) - rate of change
+        if len(history) > 1:
+            prev_metrics = history[-2]
+            features.extend(
+                [
+                    metrics.latency - prev_metrics.latency,
+                    metrics.throughput - prev_metrics.throughput,
+                    metrics.packet_loss - prev_metrics.packet_loss,
+                ]
+            )
+        else:
+            features.extend([0.0, 0.0, 0.0])
+
+        # Statistical features (4) - mean and std of recent history
+        if len(history) >= 5:
+            recent_latencies = [m.latency for m in history[-5:]]
+            recent_throughputs = [m.throughput for m in history[-5:]]
+
+            features.extend(
+                [
+                    statistics.mean(recent_latencies),
+                    statistics.stdev(recent_latencies) if len(recent_latencies) > 1 else 0.0,
+                    statistics.mean(recent_throughputs),
+                    statistics.stdev(recent_throughputs) if len(recent_throughputs) > 1 else 0.0,
+                ]
+            )
+        else:
+            features.extend([0.0, 0.0, 0.0, 0.0])
+
+        return features

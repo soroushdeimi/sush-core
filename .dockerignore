@@ -1,0 +1,110 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+*.cover
+.cache
+nosetests.xml
+coverage.xml
+*.log
+
+# Documentation builds
+docs/_build/
+docs/.doctrees/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# Development files
+requirements-dev.txt
+.pre-commit-config.yaml
+ruff.toml
+pyproject.toml
+Makefile
+run_ci_local.py
+run_tests.py
+
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Development scripts
+scripts/
+tools/
+
+# Benchmark and experiment data
+experiment_results/
+*.csv
+*.json
+*.pkl
+models/
+
+# Documentation source (keep only compiled)
+docs/paper/
+docs/images/*.pdf
+*.md
+!README.md
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI
+*.yml
+!requirements.txt

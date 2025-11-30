@@ -1,5 +1,5 @@
 """
-Configuration management for SpectralFlow.
+Configuration management for Sush.
 
 Supports config files and environment variables for deployment flexibility.
 """
@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 
-class SpectralFlowConfig:
+class SushConfig:
     """Configuration manager with environment variable support."""
 
     def __init__(self, config_file: Optional[str] = None):
@@ -79,36 +79,36 @@ class SpectralFlowConfig:
 
 # Default configurations
 DEFAULT_CLIENT_CONFIG = {
-    "network.listen_port": ("8080", "SPECTRALFLOW_LISTEN_PORT"),
-    "network.server_host": ("127.0.0.1", "SPECTRALFLOW_SERVER_HOST"),
-    "network.server_port": ("9090", "SPECTRALFLOW_SERVER_PORT"),
-    "security.threat_level": ("medium", "SPECTRALFLOW_THREAT_LEVEL"),
-    "ml.enable_detection": ("true", "SPECTRALFLOW_ML_ENABLE"),
+    "network.listen_port": ("8080", "Sush_LISTEN_PORT"),
+    "network.server_host": ("127.0.0.1", "Sush_SERVER_HOST"),
+    "network.server_port": ("9090", "Sush_SERVER_PORT"),
+    "security.threat_level": ("medium", "Sush_THREAT_LEVEL"),
+    "ml.enable_detection": ("true", "Sush_ML_ENABLE"),
 }
 
 DEFAULT_SERVER_CONFIG = {
-    "network.bind_address": ("0.0.0.0", "SPECTRALFLOW_BIND_ADDR"),
-    "network.bind_port": ("9090", "SPECTRALFLOW_BIND_PORT"),
-    "security.require_auth": ("false", "SPECTRALFLOW_REQUIRE_AUTH"),
-    "logging.level": ("INFO", "SPECTRALFLOW_LOG_LEVEL"),
+    "network.bind_address": ("0.0.0.0", "Sush_BIND_ADDR"),
+    "network.bind_port": ("9090", "Sush_BIND_PORT"),
+    "security.require_auth": ("false", "Sush_REQUIRE_AUTH"),
+    "logging.level": ("INFO", "Sush_LOG_LEVEL"),
 }
 
 
-def load_client_config(config_file: str = "config/client.conf") -> SpectralFlowConfig:
+def load_client_config(config_file: str = "config/client.conf") -> SushConfig:
     """Load client configuration with defaults."""
-    config = SpectralFlowConfig(config_file)
+    config = SushConfig(config_file)
 
     # Validate required configs
     required = {
-        "network.server_host": "SpectralFlow server hostname",
-        "network.server_port": "SpectralFlow server port",
+        "network.server_host": "Sush server hostname",
+        "network.server_port": "Sush server port",
     }
     config.validate_required(required)
 
     return config
 
 
-def load_server_config(config_file: str = "config/server.conf") -> SpectralFlowConfig:
+def load_server_config(config_file: str = "config/server.conf") -> SushConfig:
     """Load server configuration with defaults."""
-    config = SpectralFlowConfig(config_file)
+    config = SushConfig(config_file)
     return config

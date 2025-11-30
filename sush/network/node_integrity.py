@@ -299,7 +299,8 @@ class SimplifiedNodeIntegrity:
             self.logger.error(f"Error verifying signature from node {node_id}: {e}")
             return False
 
-    def get_network_statistics(self) -> dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
+        """Get integrity system statistics."""
         if not self.node_registry:
             return {}
         reputations = [record.reputation_score for record in self.node_registry.values()]
@@ -310,8 +311,12 @@ class SimplifiedNodeIntegrity:
             )
         return {
             "total_nodes": len(self.node_registry),
-            "avg_reputation": sum(reputations) / len(reputations),
+            "avg_reputation": sum(reputations) / len(reputations) if reputations else 0,
             "status_distribution": status_counts,
             "trusted_nodes": len(self.get_trusted_nodes()),
             "total_reports": len(self.performance_reports),
         }
+
+    def get_network_statistics(self) -> dict[str, Any]:
+        """Legacy alias for get_statistics."""
+        return self.get_statistics()

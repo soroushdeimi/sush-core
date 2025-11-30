@@ -1,0 +1,38 @@
+# Development Dockerfile with dev dependencies
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    g++ \
+    git \
+    vim \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# Copy requirements
+COPY requirements.txt requirements-dev.txt ./
+
+# Install dependencies
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt && \
+    pip install -r requirements-dev.txt
+
+# Copy application
+COPY . .
+
+# Install in development mode
+RUN pip install -e .
+
+# Expose ports
+EXPOSE 8443 8080
+
+# Default command
+CMD ["python", "examples/server_example.py", "--mode", "basic"]

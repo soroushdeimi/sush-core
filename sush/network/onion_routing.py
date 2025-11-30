@@ -104,13 +104,14 @@ class OnionRoutingProtocol:
     traffic analysis and provide anonymity.
     """
 
-    def __init__(self, node_id: str, private_key: bytes):
+    def __init__(self, node_id: str, private_key: bytes, adaptive_transport: Optional[Any] = None):
         """
         Initialize Onion Routing Protocol.
 
         Args:
             node_id: This node's identifier
             private_key: This node's private key
+            adaptive_transport: Optional AdaptiveTransport instance for transport layer integration
         """
         self.logger = logging.getLogger(__name__)
         self.node_id = node_id
@@ -119,6 +120,9 @@ class OnionRoutingProtocol:
         self.kem = MLKEMKeyExchange()
         self.private_key = private_key
         self.public_key, _ = self.kem.generate_keypair()
+
+        # Transport layer integration
+        self.adaptive_transport = adaptive_transport
 
         # Circuit management
         self.circuits: dict[int, Circuit] = {}
@@ -507,51 +511,95 @@ class OnionRoutingProtocol:
 
             # Establish connection to first hop to receive data
             try:
-                reader, writer = await asyncio.wait_for(
-                    asyncio.open_connection(address, port), timeout=timeout
-                )
-
-                try:
-                    # Wait for incoming cell with timeout
-                    # Read length prefix
-                    response_length_data = await asyncio.wait_for(
-                        reader.readexactly(4), timeout=timeout
+                if self.adaptive_transport:
+                    connection_id = await self.adaptive_transport.establish_connection(
+                        f"{address}:{port}"
                     )
-                    response_length = struct.unpack("!I", response_length_data)[0]
+                    connection_info = self.adaptive_transport.active_connections[connection_id]
+                    connection = connection_info["connection"]
 
-                    # Read cell data
-                    cell_data = await asyncio.wait_for(
-                        reader.readexactly(response_length), timeout=timeout
+                    try:
+                        if connection.get("type") == "tcp":
+                            reader = connection["reader"]
+                            response_length_data = await asyncio.wait_for(
+                                reader.readexactly(4), timeout=timeout
+                            )
+                            response_length = struct.unpack("!I", response_length_data)[0]
+                            cell_data = await asyncio.wait_for(
+                                reader.readexactly(response_length), timeout=timeout
+                            )
+                        else:
+                            # For non-TCP, use receive_data method
+                            cell_data = await self.adaptive_transport.receive_data(
+                                connection_id, timeout
+                            )
+                            if not cell_data:
+                                return None
+                            # Remove length prefix if present
+                            if len(cell_data) >= 4:
+                                response_length = struct.unpack("!I", cell_data[0:4])[0]
+                                cell_data = cell_data[4 : 4 + response_length]
+
+                        received_cell = self._deserialize_cell(cell_data)
+
+                        if (
+                            received_cell.circuit_id == circuit_id
+                            and received_cell.command == CellType.RELAY
+                            and received_cell.encrypted
+                        ):
+                            decrypted_data = self._decrypt_through_layers(
+                                circuit, received_cell.payload
+                            )
+                            circuit.last_activity = time.time()
+                            self.stats["cells_processed"] += 1
+                            self.stats["bytes_relayed"] += len(decrypted_data)
+                            await self.adaptive_transport.close_connection(connection_id)
+                            return decrypted_data
+                        else:
+                            self.logger.debug(
+                                f"Received non-RELAY cell or wrong circuit: {received_cell.command}"
+                            )
+                            await self.adaptive_transport.close_connection(connection_id)
+                            return None
+                    except Exception:
+                        await self.adaptive_transport.close_connection(connection_id)
+                        raise
+                else:
+                    # Fallback to direct connection
+                    reader, writer = await asyncio.wait_for(
+                        asyncio.open_connection(address, port), timeout=timeout
                     )
 
-                    # Deserialize cell
-                    received_cell = self._deserialize_cell(cell_data)
-
-                    # Check if this is a RELAY cell for our circuit
-                    if (
-                        received_cell.circuit_id == circuit_id
-                        and received_cell.command == CellType.RELAY
-                        and received_cell.encrypted
-                    ):
-                        # Decrypt through circuit layers
-                        decrypted_data = self._decrypt_through_layers(
-                            circuit, received_cell.payload
+                    try:
+                        response_length_data = await asyncio.wait_for(
+                            reader.readexactly(4), timeout=timeout
                         )
-
-                        circuit.last_activity = time.time()
-                        self.stats["cells_processed"] += 1
-                        self.stats["bytes_relayed"] += len(decrypted_data)
-
-                        return decrypted_data
-                    else:
-                        self.logger.debug(
-                            f"Received non-RELAY cell or wrong circuit: {received_cell.command}"
+                        response_length = struct.unpack("!I", response_length_data)[0]
+                        cell_data = await asyncio.wait_for(
+                            reader.readexactly(response_length), timeout=timeout
                         )
-                        return None
+                        received_cell = self._deserialize_cell(cell_data)
 
-                finally:
-                    writer.close()
-                    await writer.wait_closed()
+                        if (
+                            received_cell.circuit_id == circuit_id
+                            and received_cell.command == CellType.RELAY
+                            and received_cell.encrypted
+                        ):
+                            decrypted_data = self._decrypt_through_layers(
+                                circuit, received_cell.payload
+                            )
+                            circuit.last_activity = time.time()
+                            self.stats["cells_processed"] += 1
+                            self.stats["bytes_relayed"] += len(decrypted_data)
+                            return decrypted_data
+                        else:
+                            self.logger.debug(
+                                f"Received non-RELAY cell or wrong circuit: {received_cell.command}"
+                            )
+                            return None
+                    finally:
+                        writer.close()
+                        await writer.wait_closed()
 
             except (ConnectionRefusedError, asyncio.TimeoutError) as e:
                 self.logger.warning(f"Connection to {first_node} ({address}:{port}) failed: {e}")
@@ -608,29 +656,69 @@ class OnionRoutingProtocol:
             # Serialize cell for transmission
             cell_data = self._serialize_cell(cell)
 
-            # Establish connection and send cell
+            # Establish connection using AdaptiveTransport if available, otherwise direct
             try:
-                reader, writer = await asyncio.wait_for(
-                    asyncio.open_connection(address, port), timeout=10.0
-                )
+                if self.adaptive_transport:
+                    connection_id = await self.adaptive_transport.establish_connection(
+                        f"{address}:{port}"
+                    )
+                    connection_info = self.adaptive_transport.active_connections[connection_id]
+                    connection = connection_info["connection"]
 
-                # Send cell with length prefix
-                length_prefix = struct.pack("!I", len(cell_data))
-                writer.write(length_prefix + cell_data)
-                await writer.drain()
+                    if connection.get("type") == "tcp":
+                        writer = connection["writer"]
+                        writer.write(struct.pack("!I", len(cell_data)) + cell_data)
+                        await writer.drain()
 
-                response_cell = None
-                if expect_response:
-                    # Read response length
-                    response_length_data = await reader.readexactly(4)
-                    response_length = struct.unpack("!I", response_length_data)[0]
+                        response_cell = None
+                        if expect_response:
+                            reader = connection["reader"]
+                            response_length_data = await reader.readexactly(4)
+                            response_length = struct.unpack("!I", response_length_data)[0]
+                            response_data = await reader.readexactly(response_length)
+                            response_cell = self._deserialize_cell(response_data)
 
-                    # Read response data
-                    response_data = await reader.readexactly(response_length)
-                    response_cell = self._deserialize_cell(response_data)
+                        await self.adaptive_transport.close_connection(connection_id)
+                    else:
+                        # For non-TCP, fall back to direct connection
+                        reader, writer = await asyncio.wait_for(
+                            asyncio.open_connection(address, port), timeout=10.0
+                        )
+                        writer.write(struct.pack("!I", len(cell_data)) + cell_data)
+                        await writer.drain()
 
-                writer.close()
-                await writer.wait_closed()
+                        response_cell = None
+                        if expect_response:
+                            response_length_data = await reader.readexactly(4)
+                            response_length = struct.unpack("!I", response_length_data)[0]
+                            response_data = await reader.readexactly(response_length)
+                            response_cell = self._deserialize_cell(response_data)
+
+                        writer.close()
+                        await writer.wait_closed()
+                else:
+                    # Fallback to direct connection if no transport layer
+                    reader, writer = await asyncio.wait_for(
+                        asyncio.open_connection(address, port), timeout=10.0
+                    )
+
+                    # Send cell with length prefix
+                    length_prefix = struct.pack("!I", len(cell_data))
+                    writer.write(length_prefix + cell_data)
+                    await writer.drain()
+
+                    response_cell = None
+                    if expect_response:
+                        # Read response length
+                        response_length_data = await reader.readexactly(4)
+                        response_length = struct.unpack("!I", response_length_data)[0]
+
+                        # Read response data
+                        response_data = await reader.readexactly(response_length)
+                        response_cell = self._deserialize_cell(response_data)
+
+                    writer.close()
+                    await writer.wait_closed()
 
                 self.stats["cells_processed"] += 1
                 return response_cell

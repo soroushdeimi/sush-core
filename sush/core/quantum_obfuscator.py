@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 from .adaptive_cipher import AdaptiveCipherSuite, NetworkCondition, ThreatLevel
 from .ml_kem import MLKEMKeyExchange
+from .session_cache import SessionCache
 from .traffic_morphing import TrafficMorphingEngine
 
 
@@ -24,7 +25,7 @@ class ObfuscationContext:
 class QuantumObfuscator:
     """Quantum-resistant obfuscation system."""
 
-    def __init__(self, mtu: int = 1500):
+    def __init__(self, mtu: int = 1500, enable_session_resumption: bool = True):
         self.logger = logging.getLogger(__name__)
 
         # Initialize core components
@@ -38,7 +39,15 @@ class QuantumObfuscator:
         # Active sessions
         self.sessions: dict[str, ObfuscationContext] = {}
 
-        self.logger.info("Quantum Obfuscator initialized with ML-KEM-768")
+        # Session cache for resumption (reduces handshake overhead)
+        self.session_cache: Optional[SessionCache] = (
+            SessionCache(max_size=100, ttl=3600.0) if enable_session_resumption else None
+        )
+
+        self.logger.info(
+            f"Quantum Obfuscator initialized with ML-KEM-768 "
+            f"(session resumption: {'enabled' if enable_session_resumption else 'disabled'})"
+        )
 
     async def initialize_session(
         self,
@@ -49,6 +58,8 @@ class QuantumObfuscator:
     ) -> ObfuscationContext:
         """
         Initialize a new obfuscation session with a peer.
+        
+        Attempts to resume from cache if available, otherwise performs full handshake.
 
         Args:
             session_id: Unique session identifier
@@ -59,13 +70,48 @@ class QuantumObfuscator:
         Returns:
             ObfuscationContext: Session context for subsequent operations
         """
-        self.logger.info(f"Initializing session {session_id}")
+        # Try to resume from cache first
+        if self.session_cache:
+            cached = self.session_cache.get_session(peer_public_key)
+            if cached:
+                shared_secret, derived_keys = cached
+                self.logger.info(f"Resuming session {session_id} from cache (fast path)")
+
+                # Select initial cipher profile
+                cipher_profile = self.cipher_suite.select_cipher_profile(
+                    threat_level, network_condition
+                )
+
+                # Create session context from cached data
+                context = ObfuscationContext(
+                    session_id=session_id,
+                    threat_level=threat_level,
+                    network_condition=network_condition,
+                    peer_public_key=peer_public_key,
+                    shared_secret=shared_secret,
+                    derived_keys=derived_keys,
+                )
+
+                self.sessions[session_id] = context
+                self.logger.info(
+                    f"Session {session_id} resumed with cipher profile: {cipher_profile}"
+                )
+                return context
+
+        # Full handshake (cache miss or resumption disabled)
+        self.logger.info(f"Initializing new session {session_id} (full handshake)")
 
         # Perform ML-KEM key exchange
         ciphertext, shared_secret = self.kem.encapsulate(peer_public_key)
 
         # Derive symmetric keys
         derived_keys = self.kem.derive_keys(shared_secret, session_id.encode())
+
+        # Cache session for future resumption
+        if self.session_cache:
+            self.session_cache.store_session(
+                session_id, shared_secret, derived_keys, peer_public_key
+            )
 
         # Select initial cipher profile
         cipher_profile = self.cipher_suite.select_cipher_profile(threat_level, network_condition)

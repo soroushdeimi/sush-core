@@ -277,7 +277,7 @@ class PerformanceMetrics:
 
 class AdaptiveControlLoop:
     """
-    Adaptive Control Loop for SpectralFlow.
+    Adaptive Control Loop for Sush.
 
     Implements a sophisticated control system that:
     1. Continuously monitors network conditions and threats
@@ -501,7 +501,12 @@ class AdaptiveControlLoop:
                 transport_metrics = await self.adaptive_transport.get_performance_metrics()
 
             if self.mirror_network:
-                network_metrics = await self.mirror_network.get_performance_metrics()
+                # MirrorNetwork doesn't have get_performance_metrics, use stats instead
+                network_metrics = {
+                    "active_nodes": len(self.mirror_network.known_nodes) if self.mirror_network else 0,
+                    "active_circuits": len(self.mirror_network.active_circuits) if self.mirror_network else 0,
+                    "status": str(self.mirror_network.status) if self.mirror_network else "UNKNOWN",
+                }
 
             if self.censorship_detector:
                 security_metrics = {

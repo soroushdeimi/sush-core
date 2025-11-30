@@ -6,7 +6,7 @@ import asyncio
 import hashlib
 import logging
 import secrets
-import socket
+import time
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Any, Optional
@@ -49,6 +49,30 @@ class HopSequence:
     seed: bytes
 
 
+class UDPClientProtocol(asyncio.DatagramProtocol):
+    """Standard asyncio DatagramProtocol for UDP clients."""
+
+    def __init__(self):
+        self.transport = None
+        self.response_queue = asyncio.Queue()
+        self.error = None
+
+    def connection_made(self, transport):
+        self.transport = transport
+
+    def datagram_received(self, data, addr):
+        self.response_queue.put_nowait((data, addr))
+
+    def error_received(self, exc):
+        self.error = exc
+        self.response_queue.put_nowait(None)
+
+    def connection_lost(self, exc):
+        if exc:
+            self.error = exc
+            self.response_queue.put_nowait(None)
+
+
 class ProtocolHopper:
     """Dynamic port and protocol hopping for evasion."""
 
@@ -66,6 +90,7 @@ class ProtocolHopper:
         self.hop_sequences = {}
         self.active_connections = {}
         self.hop_task = None
+        self.peer_connections = {}  # Map connection_id to peer info for signaling
 
         self.logger.info(f"Protocol Hopper initialized with port range {port_range}")
 
@@ -241,7 +266,7 @@ class ProtocolHopper:
 
     async def _perform_hop(self, new_port: int, new_protocol: TransportProtocol):
         """
-        Perform a single hop to new port/protocol.
+        Perform a single hop to new port/protocol with signaling to peers.
 
         Args:
             new_port: Target port
@@ -249,6 +274,9 @@ class ProtocolHopper:
         """
         old_port = self.current_port
         old_protocol = self.current_protocol
+
+        # Signal all peers about the upcoming hop
+        await self._signal_hop_to_peers(new_port, new_protocol)
 
         # Close old connections if protocol is changing
         if new_protocol != old_protocol:
@@ -261,6 +289,73 @@ class ProtocolHopper:
         self.logger.debug(
             f"Hopped from {old_protocol.name}:{old_port} to {new_protocol.name}:{new_port}"
         )
+
+    async def _signal_hop_to_peers(self, new_port: int, new_protocol: TransportProtocol):
+        """Signal all active peer connections about upcoming hop."""
+        import json
+
+        hop_signal = {
+            "type": "hop_signal",
+            "new_port": new_port,
+            "new_protocol": new_protocol.name,
+            "timestamp": time.time(),
+        }
+        signal_data = json.dumps(hop_signal).encode()
+
+        for conn_id, connection in list(self.active_connections.items()):
+            try:
+                if connection.get("type") == "tcp":
+                    writer = connection.get("writer")
+                    if writer and not writer.is_closing():
+                        # Send signal with length prefix
+                        length_prefix = len(signal_data).to_bytes(4, "big")
+                        writer.write(length_prefix + signal_data)
+                        await writer.drain()
+                        self.logger.debug(f"Sent hop signal to connection {conn_id}")
+                elif connection.get("type") == "udp":
+                    sock = connection.get("socket")
+                    target = connection.get("target")
+                    if sock and target:
+                        loop = asyncio.get_event_loop()
+                        length_prefix = len(signal_data).to_bytes(4, "big")
+                        await loop.sock_sendto(sock, length_prefix + signal_data, target)
+                        self.logger.debug(f"Sent hop signal via UDP to {target}")
+            except Exception as e:
+                self.logger.warning(f"Failed to signal hop to connection {conn_id}: {e}")
+
+    async def process_hop_signal(self, connection_id: str, signal_data: bytes):
+        """
+        Process a hop signal from a peer.
+
+        Args:
+            connection_id: Connection identifier
+            signal_data: Signal data containing hop information
+        """
+        import json
+
+        try:
+            signal = json.loads(signal_data.decode())
+            if signal.get("type") != "hop_signal":
+                return
+
+            new_port = signal.get("new_port")
+            new_protocol_name = signal.get("new_protocol")
+
+            if new_port and new_protocol_name:
+                # Update connection to use new port/protocol
+                if connection_id in self.active_connections:
+                    connection = self.active_connections[connection_id]
+                    connection["next_port"] = new_port
+                    connection["next_protocol"] = TransportProtocol[new_protocol_name]
+                    self.logger.info(
+                        f"Received hop signal: switching to {new_protocol_name}:{new_port}"
+                    )
+        except Exception as e:
+            self.logger.error(f"Error processing hop signal: {e}")
+
+    def register_peer_connection(self, connection_id: str, peer_info: dict):
+        """Register a peer connection for hop signaling."""
+        self.peer_connections[connection_id] = peer_info
 
     async def _close_old_connections(self):
         """Close connections that are no longer valid after protocol hop."""
@@ -331,12 +426,18 @@ class ProtocolHopper:
             raise ConnectionError("TCP connection failed") from exc
 
     async def _create_udp_connection(self, target_host: str, port: int, timeout: float):
-        """Create UDP connection."""
+        """Create UDP connection using DatagramProtocol."""
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.setblocking(False)
-            await asyncio.get_event_loop().sock_connect(sock, (target_host, port))
-            return {"socket": sock, "type": "udp", "target": (target_host, port)}
+            loop = asyncio.get_running_loop()
+            transport, protocol = await loop.create_datagram_endpoint(
+                lambda: UDPClientProtocol(), remote_addr=(target_host, port)
+            )
+            return {
+                "transport": transport,
+                "protocol": protocol,
+                "type": "udp",
+                "target": (target_host, port),
+            }
         except Exception as exc:
             raise ConnectionError("UDP connection failed") from exc
 

@@ -3,11 +3,13 @@
 import asyncio
 import contextlib
 import logging
+import pickle
 import statistics
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from enum import Enum, auto
+from pathlib import Path
 from typing import Any, Optional
 
 import numpy as np
@@ -76,11 +78,16 @@ class CensorshipDetector:
     """Detects network censorship using ML algorithms."""
 
     def __init__(
-        self, learning_rate: float = 0.01, window_size: int = 100, confidence_threshold: float = 0.8
+        self,
+        learning_rate: float = 0.01,
+        window_size: int = 100,
+        confidence_threshold: float = 0.8,
+        model_save_path: Optional[str] = None,
     ):
         self.learning_rate = learning_rate
         self.window_size = window_size
         self.confidence_threshold = confidence_threshold
+        self.model_save_path = model_save_path or "models/censorship_detector"
 
         # Metrics collection
         self.metrics_history: deque = deque(maxlen=window_size)
@@ -101,7 +108,7 @@ class CensorshipDetector:
 
         # Machine Learning Models
         self.anomaly_detector = IsolationForest(
-            contamination=0.1,  # Expected proportion of anomalies
+            contamination=0.1,
             random_state=42,
             n_estimators=100,
         )
@@ -111,12 +118,17 @@ class CensorshipDetector:
 
         # ML training data
         self.training_features: list[list[float]] = []
-        self.training_labels: list[int] = []  # 0: normal, 1: censorship
+        self.training_labels: list[int] = []
         self.ml_models_trained = False
-        self.feature_buffer: deque = deque(maxlen=50)  # For batch ML inference
+        self.feature_buffer: deque = deque(maxlen=50)
 
         self.logger = logging.getLogger(__name__)
         self._tasks: list[asyncio.Task] = []
+
+        # Try to load saved models (pre-trained models)
+        models_loaded = self._load_models()
+        if models_loaded:
+            self.logger.info("Pre-trained models loaded successfully")
 
     async def start_monitoring(self):
         """Start continuous censorship monitoring."""
@@ -268,9 +280,33 @@ class CensorshipDetector:
     async def train_ml_models(
         self, normal_data: list[list[float]] = None, threat_data: list[list[float]] = None
     ):
-        """Train ML models with provided or collected data."""
+        """
+        Train ML models with provided or collected data.
+        
+        Note: If pre-trained models are available, this method will use them.
+        Otherwise, it falls back to training on synthetic data.
+        """
         try:
-            # Use provided data or generate synthetic training data
+            # If models are already loaded from disk, skip training
+            if self.ml_models_trained:
+                self.logger.info("Using pre-trained models (loaded from disk)")
+                return
+
+            # Try to load pre-trained models first
+            model_file = Path(self.model_save_path) / "models.pkl"
+            if model_file.exists():
+                self.logger.info(f"Attempting to load pre-trained models from {model_file}")
+                self._load_models()
+                if self.ml_models_trained:
+                    self.logger.info("Successfully loaded pre-trained models")
+                    return
+
+            # Fallback: Use provided data or generate synthetic training data
+            self.logger.warning(
+                "No pre-trained models found. Training on synthetic data. "
+                "Run 'python tools/train_model.py' to generate pre-trained models."
+            )
+
             if normal_data is None or threat_data is None:
                 normal_data, threat_data = self._generate_training_data()
 
@@ -305,10 +341,74 @@ class CensorshipDetector:
                 self.logger.info(f"ML threat classifier accuracy: {classifier_score:.3f}")
 
             self.ml_models_trained = True
-            self.logger.info("ML models trained successfully")
+            self.logger.info("ML models trained successfully (fallback to synthetic data)")
+
+            # Save models after training
+            self._save_models()
 
         except Exception as e:
             self.logger.error(f"Error training ML models: {e}")
+
+    def _save_models(self):
+        """Save trained ML models to disk."""
+        try:
+            model_dir = Path(self.model_save_path)
+            model_dir.mkdir(parents=True, exist_ok=True)
+
+            model_data = {
+                "anomaly_detector": self.anomaly_detector,
+                "threat_classifier": self.threat_classifier,
+                "feature_scaler": self.feature_scaler,
+                "ml_models_trained": self.ml_models_trained,
+                "baseline_latency": self.baseline_latency,
+                "baseline_throughput": self.baseline_throughput,
+                "baseline_loss_rate": self.baseline_loss_rate,
+            }
+
+            model_file = model_dir / "models.pkl"
+            with open(model_file, "wb") as f:
+                pickle.dump(model_data, f)
+
+            self.logger.info(f"ML models saved to {model_file}")
+        except Exception as e:
+            self.logger.warning(f"Failed to save ML models: {e}")
+
+    def _load_models(self) -> bool:
+        """
+        Load trained ML models from disk.
+        
+        Returns:
+            True if models were successfully loaded, False otherwise
+        """
+        try:
+            model_file = Path(self.model_save_path) / "models.pkl"
+            if not model_file.exists():
+                self.logger.debug("No saved models found, will train new models")
+                return False
+
+            with open(model_file, "rb") as f:
+                model_data = pickle.load(f)
+
+            self.anomaly_detector = model_data.get("anomaly_detector", self.anomaly_detector)
+            self.threat_classifier = model_data.get("threat_classifier", self.threat_classifier)
+            self.feature_scaler = model_data.get("feature_scaler", self.feature_scaler)
+            self.ml_models_trained = model_data.get("ml_models_trained", False)
+            self.baseline_latency = model_data.get("baseline_latency")
+            self.baseline_throughput = model_data.get("baseline_throughput")
+            self.baseline_loss_rate = model_data.get("baseline_loss_rate")
+
+            if self.ml_models_trained:
+                training_samples = model_data.get("training_samples", "unknown")
+                accuracy = model_data.get("classifier_accuracy", "unknown")
+                self.logger.info(
+                    f"Pre-trained ML models loaded from {model_file} "
+                    f"(trained on {training_samples} samples, accuracy: {accuracy})"
+                )
+                return True
+            return False
+        except Exception as e:
+            self.logger.warning(f"Failed to load ML models: {e}, will train new models")
+            return False
 
     def _generate_training_data(self) -> tuple[list[list[float]], list[list[float]]]:
         """Generate synthetic training data for ML models."""

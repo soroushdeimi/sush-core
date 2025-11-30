@@ -64,11 +64,15 @@ class ResponseEngine:
     escalation and fallback strategies.
     """
 
-    def __init__(self):
+    def __init__(self, mirror_network=None, adaptive_transport=None):
         self.is_active = False
         self.response_rules: list[ResponseRule] = []
         self.response_handlers: dict[ResponseAction, Callable] = {}
         self.response_history: list[dict[str, Any]] = []
+
+        # Component references for actual reconfiguration
+        self.mirror_network = mirror_network
+        self.adaptive_transport = adaptive_transport
 
         # Response state
         self.current_obfuscation_level = 1
@@ -324,6 +328,14 @@ class ResponseEngine:
             self.steganography_enabled = True
             self.logger.info("Activated steganographic channels")
 
+            # Actually enable steganography in transport layer
+            if self.adaptive_transport:
+                try:
+                    await self.adaptive_transport.enable_steganography()
+                    self.logger.info("Steganography enabled in transport layer")
+                except Exception as e:
+                    self.logger.error(f"Failed to enable steganography: {e}")
+
             # Notify steganography system if handler is registered
             if ResponseAction.ACTIVATE_STEGANOGRAPHY in self.response_handlers:
                 await self.response_handlers[ResponseAction.ACTIVATE_STEGANOGRAPHY](True)
@@ -344,6 +356,14 @@ class ResponseEngine:
         """Switch to using bridge relays."""
         self.logger.info("Activating bridge relay mode")
 
+        # Actually reconfigure mirror network to use bridge mode
+        if self.mirror_network:
+            try:
+                await self.mirror_network.configure({"use_bridge_mode": True})
+                self.logger.info("Bridge relay mode activated in mirror network")
+            except Exception as e:
+                self.logger.error(f"Failed to activate bridge relay: {e}")
+
         # Notify bridge system if handler is registered
         if ResponseAction.USE_BRIDGE_RELAY in self.response_handlers:
             await self.response_handlers[ResponseAction.USE_BRIDGE_RELAY](True)
@@ -356,6 +376,14 @@ class ResponseEngine:
             self.traffic_morphing_enabled = True
             self.logger.info("Enabled traffic morphing")
 
+            # Actually enable traffic morphing in transport layer
+            if self.adaptive_transport:
+                try:
+                    await self.adaptive_transport.configure({"enable_traffic_morphing": True})
+                    self.logger.info("Traffic morphing enabled in transport layer")
+                except Exception as e:
+                    self.logger.error(f"Failed to enable traffic morphing: {e}")
+
             # Notify traffic morphing engine if handler is registered
             if ResponseAction.ENABLE_TRAFFIC_MORPHING in self.response_handlers:
                 await self.response_handlers[ResponseAction.ENABLE_TRAFFIC_MORPHING](True)
@@ -365,6 +393,17 @@ class ResponseEngine:
     ):
         """Activate fallback communication channel."""
         self.logger.info("Activating fallback channel")
+
+        # Actually reconfigure transport to use fallback/steganographic mode
+        if self.adaptive_transport:
+            try:
+                from ..transport.adaptive_transport import TransportMode
+
+                await self.adaptive_transport.configure({"mode": TransportMode.STEGANOGRAPHIC})
+                await self.adaptive_transport.enable_steganography()
+                self.logger.info("Fallback channel activated in transport layer")
+            except Exception as e:
+                self.logger.error(f"Failed to activate fallback channel: {e}")
 
         # Notify fallback system if handler is registered
         if ResponseAction.FALLBACK_CHANNEL in self.response_handlers:

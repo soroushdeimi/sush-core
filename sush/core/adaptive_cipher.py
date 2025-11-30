@@ -89,7 +89,7 @@ class AdaptiveCipherSuite:
             ciphertext = ciphertext[:-16]
             return ciphertext, nonce, tag
         elif self.active_cipher == "aes_ocb":
-            ciphertext, nonce = self._encrypt_aes_ocb(
+            ciphertext, nonce = self._encrypt_aes_gcm_alt(
                 data, self.encryption_key, profile, additional_data
             )
             tag = ciphertext[-16:]
@@ -117,7 +117,7 @@ class AdaptiveCipherSuite:
             )
         elif self.active_cipher == "aes_ocb":
             full_ciphertext = ciphertext + tag
-            return self._decrypt_aes_ocb(
+            return self._decrypt_aes_gcm_alt(
                 full_ciphertext, self.encryption_key, iv, profile, additional_data
             )
         else:
@@ -181,27 +181,23 @@ class AdaptiveCipherSuite:
         except Exception as e:
             raise ValueError("ChaCha20-Poly1305 decryption failed") from e
 
-    def _encrypt_aes_ocb(
+    def _encrypt_aes_gcm_alt(
         self, data: bytes, key: bytes, profile: CipherProfile, additional_data: bytes = b""
     ) -> tuple[bytes, bytes]:
         """
-        Encrypt using AES-OCB mode.
+        Encrypt using AES-GCM (Alternative profile).
 
-        Note: The cryptography library does not support OCB mode natively.
-        OCB (Offset Codebook Mode) is a patented mode that requires special
-        implementations. For now, we use AES-GCM as a secure alternative.
-        If OCB support is required, consider using pyca/cryptography with
-        OCB extensions or liboqs-python.
+        Note: This profile was originally named "aes_ocb" but OCB mode is not
+        available in the standard cryptography library. We use AES-GCM as a
+        secure authenticated encryption alternative. The profile name remains
+        "aes_ocb" for backward compatibility but the implementation is GCM.
         """
-        # OCB is not available in standard cryptography library
-        # Using GCM as a secure authenticated encryption alternative
-        # TODO: Replace with actual OCB implementation if required
         cipher = AESGCM(key)
         nonce = os.urandom(12)
         ciphertext = cipher.encrypt(nonce, data, additional_data)
         return ciphertext, nonce
 
-    def _decrypt_aes_ocb(
+    def _decrypt_aes_gcm_alt(
         self,
         ciphertext: bytes,
         key: bytes,
@@ -210,19 +206,16 @@ class AdaptiveCipherSuite:
         additional_data: bytes = b"",
     ) -> bytes:
         """
-        Decrypt using AES-OCB mode.
+        Decrypt using AES-GCM (Alternative profile).
 
-        Note: Currently uses GCM as OCB is not available in standard library.
-        See _encrypt_aes_ocb for details.
+        See _encrypt_aes_gcm_alt for details.
         """
-        # OCB is not available in standard cryptography library
-        # Using GCM as a secure authenticated encryption alternative
         cipher = AESGCM(key)
         try:
             plaintext = cipher.decrypt(nonce, ciphertext, additional_data)
             return plaintext
         except Exception as e:
-            raise ValueError("AES-GCM decryption failed (OCB fallback)") from e
+            raise ValueError("AES-GCM decryption failed") from e
 
     def get_current_profile_info(self) -> dict:
         profile = self.cipher_profiles[self.active_cipher]

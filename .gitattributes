@@ -1,0 +1,87 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout.
+*.py text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+*.conf text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+
+# Denote all files that are truly binary and should not be modified.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.pkl binary
+*.h5 binary
+*.onnx binary
+*.pt binary
+*.pth binary
+*.joblib binary
+
+# Python specific
+*.pyc binary
+*.pyo binary
+*.pyd binary
+*.egg binary
+*.whl binary
+
+# Documentation
+*.md text eol=lf
+*.rst text eol=lf
+
+# Config files
+*.conf text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+
+# Scripts
+*.sh text eol=lf
+*.bash text eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+
+# Docker
+Dockerfile* text eol=lf
+*.dockerfile text eol=lf
+docker-compose*.yml text eol=lf
+
+# CI/CD
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Git
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# Requirements
+requirements*.txt text eol=lf
+
+# Makefile
+Makefile text eol=lf
+makefile text eol=lf
+
+# License
+LICENSE text eol=lf
+LICENSE.* text eol=lf

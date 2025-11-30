@@ -1,5 +1,5 @@
 """
-SpectralFlow Control Layer
+Sush Control Layer
 
 Adaptive control loop with ML-based censorship detection and response.
 """

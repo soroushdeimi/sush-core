@@ -1,4 +1,4 @@
-"""SpectralFlow client implementation."""
+"""Sush client implementation."""
 
 import logging
 import secrets
@@ -17,7 +17,7 @@ from .transport.adaptive_transport import AdaptiveTransport
 
 @dataclass
 class ClientConfig:
-    """Configuration for SpectralFlow client."""
+    """Configuration for Sush client."""
 
     # Identity
     node_id: Optional[str] = None
@@ -52,9 +52,9 @@ class ClientConfig:
 
         if self.bootstrap_nodes is None:
             self.bootstrap_nodes = [
-                "mirror1.spectralflow.net:8443",
-                "mirror2.spectralflow.net:8443",
-                "mirror3.spectralflow.net:8443",
+                "mirror1.Sush.net:8443",
+                "mirror2.Sush.net:8443",
+                "mirror3.Sush.net:8443",
             ]
 
         if self.preferred_protocols is None:
@@ -64,17 +64,17 @@ class ClientConfig:
             self.preferred_ports = [443, 80, 53, 8080, 8443]
 
 
-class SpectralFlowClient:
+class SushClient:
     """
-    SpectralFlow Client - Main entry point for censorship circumvention.
+    Sush Client - Main entry point for censorship circumvention.
 
-    Provides a high-level interface for applications to use SpectralFlow's
+    Provides a high-level interface for applications to use Sush's
     quantum-resistant, self-adapting censorship circumvention capabilities.
     """
 
     def __init__(self, config: Optional[ClientConfig] = None):
         """
-        Initialize SpectralFlow client.
+        Initialize Sush client.
 
         Args:
             config: Client configuration (uses defaults if None)
@@ -86,11 +86,9 @@ class SpectralFlowClient:
         self.logger = logging.getLogger(__name__)
 
         # Component initialization
-        self.quantum_obfuscator = QuantumObfuscator(obfuscation_level=self.config.obfuscation_level)
+        self.quantum_obfuscator = QuantumObfuscator()
 
-        self.adaptive_transport = AdaptiveTransport(
-            protocols=self.config.preferred_protocols, ports=self.config.preferred_ports
-        )
+        self.adaptive_transport = AdaptiveTransport()
 
         self.mirror_network = MirrorNetwork(
             node_id=self.config.node_id, private_key=self.config.private_key
@@ -98,7 +96,9 @@ class SpectralFlowClient:
 
         self.censorship_detector = CensorshipDetector()
         self.threat_monitor = ThreatMonitor()
-        self.response_engine = ResponseEngine()
+        self.response_engine = ResponseEngine(
+            mirror_network=self.mirror_network, adaptive_transport=self.adaptive_transport
+        )
 
         self.adaptive_control = AdaptiveControlLoop(
             adaptation_interval=self.config.adaptation_interval
@@ -110,7 +110,7 @@ class SpectralFlowClient:
         self.active_connections: dict[str, Any] = {}
         self.connection_callbacks: dict[str, Callable] = {}
 
-        self.logger.info(f"SpectralFlow client initialized with node ID: {self.config.node_id}")
+        self.logger.info(f"Sush client initialized with node ID: {self.config.node_id}")
 
     def _setup_logging(self):
         """Setup logging configuration."""
@@ -128,13 +128,13 @@ class SpectralFlowClient:
         logging.getLogger("requests").setLevel(logging.WARNING)
 
     async def start(self):
-        """Start the SpectralFlow client."""
+        """Start the Sush client."""
         if self.is_running:
             self.logger.warning("Client already running")
             return
 
         try:
-            self.logger.info("Starting SpectralFlow client...")
+            self.logger.info("Starting Sush client...")
 
             # Initialize components
             await self._initialize_components()
@@ -148,7 +148,7 @@ class SpectralFlowClient:
             self.is_running = True
             self.is_connected = True
 
-            self.logger.info("SpectralFlow client started successfully")
+            self.logger.info("Sush client started successfully")
 
         except Exception as e:
             self.logger.error(f"Failed to start client: {e}")
@@ -156,11 +156,11 @@ class SpectralFlowClient:
             raise
 
     async def stop(self):
-        """Stop the SpectralFlow client."""
+        """Stop the Sush client."""
         if not self.is_running:
             return
 
-        self.logger.info("Stopping SpectralFlow client...")
+        self.logger.info("Stopping Sush client...")
 
         try:
             # Close active connections
@@ -172,7 +172,7 @@ class SpectralFlowClient:
             self.is_running = False
             self.is_connected = False
 
-            self.logger.info("SpectralFlow client stopped")
+            self.logger.info("Sush client stopped")
 
         except Exception as e:
             self.logger.error(f"Error stopping client: {e}")
@@ -249,7 +249,7 @@ class SpectralFlowClient:
 
     async def connect(self, destination: str, port: int, protocol: str = "tcp") -> str:
         """
-        Establish a connection through SpectralFlow.
+        Establish a connection through Sush.
 
         Args:
             destination: Target hostname or IP
@@ -459,18 +459,18 @@ class SpectralFlowClient:
 
 
 # Convenience functions for quick usage
-async def create_client(config: Optional[ClientConfig] = None) -> SpectralFlowClient:
-    """Create and start a SpectralFlow client."""
-    client = SpectralFlowClient(config)
+async def create_client(config: Optional[ClientConfig] = None) -> SushClient:
+    """Create and start a Sush client."""
+    client = SushClient(config)
     await client.start()
     return client
 
 
-async def connect_through_spectralflow(
+async def connect_through_Sush(
     destination: str, port: int, protocol: str = "tcp", config: Optional[ClientConfig] = None
-) -> SpectralFlowClient:
+) -> SushClient:
     """
-    Quick connection through SpectralFlow.
+    Quick connection through Sush.
 
     Args:
         destination: Target hostname or IP
@@ -479,7 +479,7 @@ async def connect_through_spectralflow(
         config: Client configuration
 
     Returns:
-        Connected SpectralFlow client
+        Connected Sush client
     """
     client = await create_client(config)
     await client.connect(destination, port, protocol)

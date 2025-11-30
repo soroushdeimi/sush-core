@@ -95,10 +95,11 @@ class MirrorNetworkConnection:
 class MirrorNetwork:
     """Simplified MirrorNet network coordination."""
 
-    def __init__(self, node_id: str, private_key: bytes):
+    def __init__(self, node_id: str, private_key: bytes, adaptive_transport=None):
         self.node_id = node_id
         self.private_key = private_key
         self.logger = logging.getLogger(f"MirrorNetwork-{node_id}")
+        self.adaptive_transport = adaptive_transport
 
         self.config: dict[str, Any] = {
             "bootstrap_nodes": [],
@@ -497,7 +498,77 @@ class MirrorNetwork:
                 await asyncio.sleep(60)
 
     async def _discover_nodes(self) -> None:
-        self.logger.debug(f"Current known nodes: {len(self.known_nodes)}")
+        """Discover new nodes by querying known directory servers or bootstrap nodes."""
+        self.logger.debug(f"Starting node discovery. Current known nodes: {len(self.known_nodes)}")
+
+        # Identify directory servers among known nodes
+        # For simplicity, treat bootstrap nodes as potential directory servers
+        potential_directories = []
+
+        # Add bootstrap nodes
+        bootstrap_nodes = self.config.get("bootstrap_nodes", [])
+        for node_addr in bootstrap_nodes:
+            if isinstance(node_addr, str):
+                host, port = node_addr.split(":")
+                potential_directories.append((host, int(port)))
+            elif isinstance(node_addr, dict):
+                potential_directories.append((node_addr.get("host"), node_addr.get("port")))
+
+        # Also try asking random known nodes (gossip style)
+        for node in list(self.known_nodes.values())[:3]:
+            potential_directories.append((node.host, node.port))
+
+        # Query directories
+        for host, port in potential_directories:
+            try:
+                # Open connection
+                reader, writer = await asyncio.wait_for(
+                    asyncio.open_connection(host, port), timeout=10.0
+                )
+
+                # Send directory fetch command
+                writer.write(len(b"DIR_FETCH").to_bytes(4, "big") + b"DIR_FETCH")
+                await writer.drain()
+
+                # Read response
+                length_data = await asyncio.wait_for(reader.readexactly(4), timeout=10.0)
+                length = int.from_bytes(length_data, "big")
+                response_data = await asyncio.wait_for(reader.readexactly(length), timeout=10.0)
+
+                if response_data.startswith(b"DIR_LIST:"):
+                    import json
+
+                    dir_json = response_data[9:].decode("utf-8")
+                    data = json.loads(dir_json)
+
+                    new_nodes = 0
+                    for node_data in data.get("nodes", []):
+                        node_id = node_data.get("node_id")
+                        if node_id and node_id not in self.known_nodes and node_id != self.node_id:
+                            # Register new node
+                            new_node = NodeInfo(
+                                node_id=node_id,
+                                node_type="relay",
+                                host=node_data.get("host"),
+                                port=node_data.get("port"),
+                                public_key=bytes.fromhex(node_data.get("public_key"))
+                                if node_data.get("public_key")
+                                else secrets.token_bytes(32),
+                                last_seen=time.time(),
+                                reputation_score=node_data.get("reputation", 0.5),
+                            )
+                            self.known_nodes[node_id] = new_node
+                            new_nodes += 1
+
+                    if new_nodes > 0:
+                        self.logger.info(f"Discovered {new_nodes} new nodes from {host}:{port}")
+                        self.stats["nodes_discovered"] += new_nodes
+
+                writer.close()
+                await writer.wait_closed()
+
+            except Exception as e:
+                self.logger.debug(f"Failed to query directory {host}:{port}: {e}")
 
     async def _network_monitoring_loop(self) -> None:
         while self.running:
@@ -600,6 +671,24 @@ class MirrorNetwork:
     async def _open_transport_connection(
         self, destination: str, port: int, protocol: str
     ) -> Optional[dict[str, Any]]:
+        """Open transport connection using AdaptiveTransport if available, fallback to direct."""
+        if self.adaptive_transport:
+            try:
+                connection_id = await self.adaptive_transport.establish_connection(
+                    f"{destination}:{port}"
+                )
+                connection_info = self.adaptive_transport.active_connections.get(connection_id)
+                if connection_info:
+                    conn = connection_info.get("connection", {})
+                    return {
+                        "reader": conn.get("reader"),
+                        "writer": conn.get("writer"),
+                        "connection_id": connection_id,
+                    }
+            except Exception as exc:
+                self.logger.warning(f"AdaptiveTransport connection failed, using fallback: {exc}")
+
+        # Fallback to direct connection
         scheme = (protocol or "tcp").lower()
         if scheme not in ("tcp", "udp", "quic", "websocket"):
             self.logger.warning(f"Unsupported protocol '{protocol}', defaulting to TCP")

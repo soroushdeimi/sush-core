@@ -25,12 +25,20 @@ class DocumentationTests(unittest.TestCase):
 class PackagingTests(unittest.TestCase):
     def test_setup_points_to_sush_namespace(self):
         setup = (ROOT / "setup.py").read_text(encoding="utf-8")
-        self.assertIn("packages=find_packages(include=['sush', 'sush.*'])", setup)
+        # Check with flexible quotes
+        self.assertTrue(
+            "packages=find_packages(include=['sush', 'sush.*'])" in setup
+            or 'packages=find_packages(include=["sush", "sush.*"])' in setup
+        )
         self.assertIn('"sush": ["config/*.conf"]', setup)
 
     def test_cli_imports_sush_client(self):
         cli = (ROOT / "sush_cli.py").read_text(encoding="utf-8")
-        self.assertIn("from sush.client import SushClient", cli)
+        # Allow combined import
+        self.assertTrue(
+            "from sush.client import SushClient" in cli
+            or "from sush.client import ClientConfig, SushClient" in cli
+        )
 
 
 if __name__ == "__main__":

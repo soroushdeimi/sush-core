@@ -202,9 +202,15 @@ class AdaptiveTransport:
             await writer.drain()
             return True
         elif connection["type"] == "udp":
-            sock = connection["socket"]
-            sock.send(data)
-            return True
+            transport = connection.get("transport")
+            if transport:
+                transport.sendto(data)
+                return True
+            # Fallback for old socket-based connections if any
+            sock = connection.get("socket")
+            if sock:
+                sock.send(data)
+                return True
 
         return False
 
@@ -252,31 +258,46 @@ class AdaptiveTransport:
             except asyncio.TimeoutError:
                 return None
         elif connection["type"] == "udp":
-            # Implement proper UDP receiving using asyncio
-            sock = connection["socket"]
+            # Implement proper UDP receiving using asyncio DatagramProtocol
+            protocol = connection.get("protocol")
             target = connection.get("target")
 
-            try:
-                # Use asyncio to receive UDP data with timeout
-                loop = asyncio.get_event_loop()
-                data, addr = await asyncio.wait_for(
-                    loop.sock_recvfrom(sock, 65535),  # Max UDP packet size
-                    timeout=timeout,
-                )
-
-                # Verify the packet came from the expected target (if specified)
-                if target and addr != target:
-                    self.logger.warning(
-                        f"Received UDP packet from unexpected address {addr}, expected {target}"
+            if protocol:
+                try:
+                    # Wait for packet from queue
+                    response = await asyncio.wait_for(
+                        protocol.response_queue.get(), timeout=timeout
                     )
-                    # Still return the data, but log the warning
+                    if response is None:
+                        if protocol.error:
+                            self.logger.error(f"UDP error: {protocol.error}")
+                        return None
 
-                return data if data else None
-            except asyncio.TimeoutError:
-                return None
-            except OSError as e:
-                self.logger.error(f"UDP receive error: {e}")
-                return None
+                    data, addr = response
+                    # Verify target if strictly needed, but usually remote_addr filters
+                    return data
+                except asyncio.TimeoutError:
+                    return None
+
+            # Fallback for raw sockets (legacy/direct)
+            sock = connection.get("socket")
+            if sock:
+                try:
+                    loop = asyncio.get_event_loop()
+                    data, addr = await asyncio.wait_for(
+                        loop.sock_recvfrom(sock, 65535),
+                        timeout=timeout,
+                    )
+                    if target and addr != target:
+                        self.logger.warning(
+                            f"Received UDP packet from unexpected address {addr}, expected {target}"
+                        )
+                    return data
+                except asyncio.TimeoutError:
+                    return None
+                except OSError as e:
+                    self.logger.error(f"UDP receive error: {e}")
+                    return None
 
         return None
 

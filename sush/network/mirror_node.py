@@ -68,13 +68,22 @@ class MirrorConfig:
 
 
 class MirrorNode:
-    """Mirror Node - Reverse Proxy with Hidden SpectralFlow Capability."""
+    """Mirror Node - Reverse Proxy with Hidden Sush Capability."""
 
-    def __init__(self, node_type: NodeType, listen_port: int = 8080, ssl_port: int = 8443):
+    def __init__(
+        self,
+        node_type: NodeType,
+        listen_port: int = 8080,
+        ssl_port: int = 8443,
+        ssl_cert_path: Optional[str] = None,
+        ssl_key_path: Optional[str] = None,
+    ):
         self.logger = logging.getLogger(__name__)
         self.node_type = node_type
         self.listen_port = listen_port
         self.ssl_port = ssl_port
+        self.ssl_cert_path = ssl_cert_path
+        self.ssl_key_path = ssl_key_path
         self.node_id = self._generate_node_id()
         self.credentials = self._generate_credentials()
         self.legitimate_services: dict[str, LegitimateService] = {}
@@ -90,11 +99,11 @@ class MirrorNode:
         self.app: Optional[web.Application] = None
         self.server: Optional[web.AppRunner] = None
         self.client_session: Optional[ClientSession] = None
-        self.spectralflow_header = "X-SF-Nonce"
+        self.Sush_header = "X-SF-Nonce"
         self.hidden_endpoints = {
             "/api/v1/health": self._handle_health_check,
             "/api/v1/status": self._handle_status,
-            "/.well-known/spectralflow": self._handle_spectralflow_announce,
+            "/.well-known/Sush": self._handle_Sush_announce,
         }
         self.logger.info(f"Mirror Node {self.node_id} initialized as {node_type.name}")
 
@@ -140,29 +149,46 @@ class MirrorNode:
             self.logger.error(f"Error stopping mirror node: {e}")
 
     def _create_ssl_context(self) -> Optional[ssl.SSLContext]:
+        """Create SSL context with certificate and key files."""
+        if not self.ssl_cert_path or not self.ssl_key_path:
+            self.logger.debug("SSL certificate or key path not provided, skipping HTTPS")
+            return None
+
         try:
-            ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-            return None
+            import os
+
+            if not os.path.exists(self.ssl_cert_path):
+                self.logger.warning(f"SSL certificate file not found: {self.ssl_cert_path}")
+                return None
+
+            if not os.path.exists(self.ssl_key_path):
+                self.logger.warning(f"SSL key file not found: {self.ssl_key_path}")
+                return None
+
+            context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            context.load_cert_chain(self.ssl_cert_path, self.ssl_key_path)
+            self.logger.info(f"SSL context created with cert: {self.ssl_cert_path}")
+            return context
         except Exception as e:
-            self.logger.warning(f"Failed to create SSL context: {e}")
-            return None
+            self.logger.error(f"Failed to create SSL context: {e}")
+            raise
 
     async def _setup_routes(self):
         self.app.router.add_route("*", "/{path:.*}", self._handle_request)
-        self.app.middlewares.append(self._middleware_spectralflow_detector)
+        self.app.middlewares.append(self._middleware_Sush_detector)
         self.app.middlewares.append(self._middleware_proxy_headers)
 
-    async def _middleware_spectralflow_detector(self, request: web.Request, handler):
-        nonce = request.headers.get(self.spectralflow_header)
-        if nonce and self._verify_spectralflow_nonce(nonce):
-            request["is_spectralflow"] = True
+    async def _middleware_Sush_detector(self, request: web.Request, handler):
+        nonce = request.headers.get(self.Sush_header)
+        if nonce and self._verify_Sush_nonce(nonce):
+            request["is_Sush"] = True
             request["sf_nonce"] = nonce
         else:
-            request["is_spectralflow"] = False
+            request["is_Sush"] = False
         return await handler(request)
 
     async def _middleware_proxy_headers(self, request: web.Request, handler):
-        if not request.get("is_spectralflow", False):
+        if not request.get("is_Sush", False):
             request["proxy_headers"] = {
                 "X-Forwarded-For": request.remote,
                 "X-Forwarded-Proto": request.scheme,
@@ -171,19 +197,19 @@ class MirrorNode:
             }
         return await handler(request)
 
-    def _verify_spectralflow_nonce(self, nonce: str) -> bool:
+    def _verify_Sush_nonce(self, nonce: str) -> bool:
         try:
             return len(nonce) == 32 and all(c in "0123456789abcdef" for c in nonce.lower())
         except Exception:
             return False
 
     async def _handle_request(self, request: web.Request) -> web.Response:
-        if request.get("is_spectralflow", False):
-            return await self._handle_spectralflow_request(request)
+        if request.get("is_Sush", False):
+            return await self._handle_Sush_request(request)
         else:
             return await self._handle_legitimate_request(request)
 
-    async def _handle_spectralflow_request(self, request: web.Request) -> web.Response:
+    async def _handle_Sush_request(self, request: web.Request) -> web.Response:
         try:
             path = request.match_info.get("path", "")
             if f"/{path}" in self.hidden_endpoints:
@@ -193,9 +219,9 @@ class MirrorNode:
                 return await self._handle_circuit_request(request)
             if path.startswith("relay/"):
                 return await self._handle_relay_request(request)
-            return web.Response(status=404, text="SpectralFlow endpoint not found")
+            return web.Response(status=404, text="Sush endpoint not found")
         except Exception as e:
-            self.logger.error(f"Error handling SpectralFlow request: {e}")
+            self.logger.error(f"Error handling Sush request: {e}")
             return web.Response(status=500, text="Internal server error")
 
     async def _handle_legitimate_request(self, request: web.Request) -> web.Response:
@@ -256,7 +282,7 @@ class MirrorNode:
         }
         return web.json_response(status_data)
 
-    async def _handle_spectralflow_announce(self, request: web.Request) -> web.Response:
+    async def _handle_Sush_announce(self, request: web.Request) -> web.Response:
         announcement = {
             "node_id": self.node_id,
             "public_key": self.credentials.public_key.hex(),
@@ -352,13 +378,48 @@ class MirrorNode:
                 return web.Response(status=404, text="Circuit not found")
             circuit = self.active_circuits[circuit_id]
             data = await request.read()
-            circuit["bytes_relayed"] += len(data)
-            circuit["last_activity"] = time.time()
-            self.relay_stats["bytes_relayed"] += len(data)
-            self.relay_stats["packets_relayed"] += 1
-            return web.Response(
-                status=200, text=f"Relayed {len(data)} bytes on circuit {circuit_id}"
-            )
+
+            next_hop = circuit.get("next_hop")
+            if next_hop:
+                try:
+                    if ":" in next_hop:
+                        host, port = next_hop.rsplit(":", 1)
+                        port = int(port)
+                    else:
+                        host = next_hop
+                        port = 8080
+
+                    next_hop_url = f"http://{host}:{port}/relay/{circuit_id}"
+
+                    async with self.client_session.post(
+                        next_hop_url,
+                        data=data,
+                        headers={self.Sush_header: secrets.token_hex(16)},
+                        timeout=aiohttp.ClientTimeout(total=30),
+                    ) as response:
+                        response_data = await response.read()
+                        circuit["bytes_relayed"] += len(data)
+                        circuit["last_activity"] = time.time()
+                        self.relay_stats["bytes_relayed"] += len(data)
+                        self.relay_stats["packets_relayed"] += 1
+
+                        return web.Response(
+                            status=response.status,
+                            body=response_data,
+                            headers=dict(response.headers),
+                        )
+                except Exception as e:
+                    self.logger.error(f"Error forwarding to next hop {next_hop}: {e}")
+                    return web.Response(status=502, text=f"Failed to forward to next hop: {e}")
+            else:
+                circuit["bytes_relayed"] += len(data)
+                circuit["last_activity"] = time.time()
+                self.relay_stats["bytes_relayed"] += len(data)
+                self.relay_stats["packets_relayed"] += 1
+                return web.Response(
+                    status=200,
+                    text=f"Relayed {len(data)} bytes on circuit {circuit_id} (exit node)",
+                )
         except Exception as e:
             self.logger.error(f"Error handling relay request: {e}")
             return web.Response(status=500, text="Relay failed")

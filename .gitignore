@@ -229,6 +229,32 @@ data/temp/
 *.npy
 *.npz
 
+# Benchmark data and results
+experiment_results/
+tests/data/
+*.csv
+*.log
+
+# Generated plots (except in docs/images)
+*.png
+*.pdf
+!docs/images/*.png
+!docs/images/*.pdf
+
+# Debug scripts
+debug_*.py
+
+# Obsolete Mermaid generation scripts
+generate_mermaid*.py
+create_all_diagrams.py
+generate_all_diagrams.py
+generate_all_plots.py
+
+# Build artifacts
+sush.egg-info/
+build/
+dist/
+
 # Debug files
 debug*.py
 debug*.txt

@@ -1,6 +1,7 @@
 """sushCore server implementation."""
 
 import asyncio
+import base64
 import json
 import logging
 import secrets
@@ -159,6 +160,10 @@ class ConnectionHandler:
                 await self._handle_relay_command(data[6:])
             elif data.startswith(b"STATUS:"):
                 await self._handle_status_command()
+            elif data.startswith(b"DIR_REGISTER:"):
+                await self._handle_directory_register(data[13:])
+            elif data.startswith(b"DIR_FETCH"):
+                await self._handle_directory_fetch()
             else:
                 await self._send_data(b"ERROR:Unknown command")
 
@@ -189,9 +194,97 @@ class ConnectionHandler:
             await self._send_data(b"CONNECT_FAILED:Invalid request")
 
     async def _handle_relay_command(self, data: bytes):
-        """Handle data relay request."""
-        # Relay data through established connections
-        await self._send_data(b"RELAY_OK:Data relayed")
+        """Handle data relay request and actually forward data to destination."""
+        try:
+            # Parse relay command: RELAY:{"connection_id": "...", "data": "base64..."}
+            try:
+                relay_request = json.loads(data.decode("utf-8"))
+                connection_id = relay_request.get("connection_id")
+                payload_data = relay_request.get("data")
+
+                if not connection_id:
+                    await self._send_data(b"RELAY_ERROR:Missing connection_id")
+                    return
+
+                if not payload_data:
+                    await self._send_data(b"RELAY_ERROR:Missing data")
+                    return
+
+                # Decode base64 data if provided as string
+                if isinstance(payload_data, str):
+                    actual_data = base64.b64decode(payload_data)  # noqa: F823
+                else:
+                    actual_data = payload_data
+
+                # Look up relay connection
+                if connection_id not in self.server.relay_connections:
+                    await self._send_data(b"RELAY_ERROR:Connection not found")
+                    return
+
+                relay_conn = self.server.relay_connections[connection_id]
+                writer = relay_conn.get("writer")
+
+                if not writer or writer.is_closing():
+                    await self._send_data(b"RELAY_ERROR:Connection closed")
+                    return
+
+                # Actually forward the data to the destination
+                writer.write(actual_data)
+                await writer.drain()
+
+                # Update statistics
+                self.server.stats["bytes_relayed"] += len(actual_data)
+                relay_conn["bytes_sent"] = relay_conn.get("bytes_sent", 0) + len(actual_data)
+
+                # Optionally read response if available
+                reader = relay_conn.get("reader")
+                response_data = None
+                if reader:
+                    try:
+                        response_data = await asyncio.wait_for(reader.read(8192), timeout=1.0)
+                    except asyncio.TimeoutError:
+                        pass
+
+                # Send success response with optional response data
+                if response_data:
+                    response_payload = base64.b64encode(response_data).decode("utf-8")
+                    response = json.dumps(
+                        {
+                            "status": "success",
+                            "bytes_sent": len(actual_data),
+                            "response_data": response_payload,
+                        }
+                    )
+                else:
+                    response = json.dumps({"status": "success", "bytes_sent": len(actual_data)})
+
+                await self._send_data(b"RELAY_OK:" + response.encode())
+
+            except json.JSONDecodeError:
+                # Fallback: try simple format RELAY:connection_id:base64_data
+                parts = data.split(b":", 2)
+                if len(parts) >= 3:
+                    connection_id = parts[1].decode("utf-8")
+                    actual_data = base64.b64decode(parts[2])
+
+                    if connection_id in self.server.relay_connections:
+                        relay_conn = self.server.relay_connections[connection_id]
+                        writer = relay_conn.get("writer")
+                        if writer and not writer.is_closing():
+                            writer.write(actual_data)
+                            await writer.drain()
+                            self.server.stats["bytes_relayed"] += len(actual_data)
+                            await self._send_data(b"RELAY_OK:Data relayed")
+                        else:
+                            await self._send_data(b"RELAY_ERROR:Connection closed")
+                    else:
+                        await self._send_data(b"RELAY_ERROR:Connection not found")
+                else:
+                    await self._send_data(b"RELAY_ERROR:Invalid format")
+
+        except Exception as e:
+            self.logger.error(f"Error in relay command: {e}")
+            await self._send_data(b"RELAY_ERROR:" + str(e).encode())
 
     async def _handle_status_command(self):
         """Handle status request."""
@@ -209,6 +302,87 @@ class ConnectionHandler:
         except Exception as e:
             self.logger.error(f"Status command error: {e}")
             await self._send_data(b"ERROR:Status unavailable")
+
+    async def _handle_directory_register(self, data: bytes):
+        """Handle node registration request."""
+        if not self.server.config.is_directory_server:
+            await self._send_data(b"ERROR:Not a directory server")
+            return
+
+        try:
+            # Parse registration data
+            node_info = json.loads(data.decode("utf-8"))
+            node_id = node_info.get("node_id")
+            public_key = node_info.get("public_key")
+
+            if not node_id or not public_key:
+                await self._send_data(b"ERROR:Invalid registration data")
+                return
+
+            # Verify signature if provided (TODO: strict verification)
+
+            # Register in node integrity system
+            await self.server.node_integrity.register_node(node_id, public_key)
+
+            # Update node info with connectivity details
+            host = node_info.get("address", self.client_address)
+            port = node_info.get("port", 8080)
+
+            # Add to known nodes (using internal mirror network structure)
+            # We use a hack here to inject it into the mirror network's knowledge
+            from .network.mirror_network import NodeInfo
+
+            new_node = NodeInfo(
+                node_id=node_id,
+                node_type="relay",  # Default type
+                host=host,
+                port=port,
+                public_key=bytes.fromhex(public_key) if isinstance(public_key, str) else public_key,
+                last_seen=time.time(),
+                reputation_score=0.5,
+            )
+
+            self.server.mirror_network.known_nodes[node_id] = new_node
+
+            self.logger.info(f"Registered node {node_id} in directory")
+            await self._send_data(b"DIR_OK:Registered")
+
+        except Exception as e:
+            self.logger.error(f"Directory register error: {e}")
+            await self._send_data(b"ERROR:Registration failed")
+
+    async def _handle_directory_fetch(self):
+        """Handle directory listing request."""
+        if not self.server.config.is_directory_server:
+            await self._send_data(b"ERROR:Not a directory server")
+            return
+
+        try:
+            # Get list of trusted nodes
+            nodes = []
+            known_nodes = self.server.mirror_network.known_nodes
+
+            for _node_id, info in known_nodes.items():
+                # Only return active nodes
+                if time.time() - info.last_seen < 3600:
+                    nodes.append(
+                        {
+                            "node_id": info.node_id,
+                            "host": info.host,
+                            "port": info.port,
+                            "public_key": info.public_key.hex()
+                            if isinstance(info.public_key, bytes)
+                            else info.public_key,
+                            "reputation": info.reputation_score,
+                        }
+                    )
+
+            response = json.dumps({"nodes": nodes})
+            await self._send_data(b"DIR_LIST:" + response.encode())
+
+        except Exception as e:
+            self.logger.error(f"Directory fetch error: {e}")
+            await self._send_data(b"ERROR:Fetch failed")
 
     async def _send_data(self, data: bytes):
         """Send data to client."""
@@ -285,11 +459,15 @@ class SushServer:
         self.quantum_obfuscator = QuantumObfuscator()
         self.adaptive_transport = AdaptiveTransport()
         self.mirror_network = MirrorNetwork(
-            node_id=self.config.node_id, private_key=self.config.private_key
+            node_id=self.config.node_id,
+            private_key=self.config.private_key,
+            adaptive_transport=self.adaptive_transport,
         )
 
         self.onion_routing = OnionRoutingProtocol(
-            node_id=self.config.node_id, private_key=self.config.private_key
+            node_id=self.config.node_id,
+            private_key=self.config.private_key,
+            adaptive_transport=self.adaptive_transport,
         )
 
         self.node_integrity = SimplifiedNodeIntegrity(
@@ -298,7 +476,9 @@ class SushServer:
 
         self.censorship_detector = CensorshipDetector()
         self.threat_monitor = ThreatMonitor()
-        self.response_engine = ResponseEngine()
+        self.response_engine = ResponseEngine(
+            mirror_network=self.mirror_network, adaptive_transport=self.adaptive_transport
+        )
 
         self.adaptive_control = AdaptiveControlLoop()
 
@@ -442,10 +622,16 @@ class SushServer:
     async def _join_mirror_network(self):
         """Join the mirror network as a node."""
         try:
-            await self.mirror_network.join_network()
-            await self.mirror_network.announce_node()
-
-            self.logger.info("Joined mirror network")
+            # Bootstrap network connection (may fail if no bootstrap nodes configured)
+            bootstrap_success = await self.mirror_network.bootstrap_network()
+            
+            # Announce node presence (only if we have known nodes)
+            if bootstrap_success or self.mirror_network.known_nodes:
+                await self.mirror_network.announce_node()
+                self.logger.info("Joined mirror network")
+            else:
+                # For localhost/testing: no bootstrap nodes is OK
+                self.logger.debug("No bootstrap nodes configured (OK for localhost testing)")
 
         except Exception as e:
             self.logger.error(f"Failed to join mirror network: {e}")
@@ -554,8 +740,9 @@ class SushServer:
                     except Exception:
                         pass
 
-                # Mine integrity blocks if we have pending transactions
-                await self.node_integrity.mine_block()
+                # Cleanup old reports (mine_block not needed in simplified version)
+                if self.node_integrity:
+                    await self.node_integrity.cleanup_old_reports(max_age_days=30)
 
             except Exception as e:
                 self.logger.error(f"Cleanup task error: {e}")
