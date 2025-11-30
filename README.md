@@ -15,10 +15,6 @@ keep traffic moving even when networks fight back.
 - **MirrorNet**: Multi-hop routing and node integrity scaffolding (simulated for now)
 - **Adaptive control loop**: Condition evaluators + (optional) ML classifiers for threat response
 
-> ℹ️ Several components (MirrorNet overlays, advanced ML models, real bridge relays)
-> are still mocked/simulated. See [ARCHITECTURE.md](ARCHITECTURE.md) for the current
-> implementation level by layer.
-
 ## Setup
 
 ### Requirements
