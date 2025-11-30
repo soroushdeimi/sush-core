@@ -237,38 +237,53 @@ class TTLChannel(SteganographicChannel):
         from incoming IP packets and decode the hidden data.
         """
         if not SCAPY_AVAILABLE:
-            # Fallback implementation using raw sockets
             return await self._receive_data_fallback(timeout)
 
         try:
-            # Use scapy to sniff packets and extract TTL values
             from scapy.all import IP, sniff
+            import threading
 
-            # Sniff packets with timeout
-            packets = sniff(count=8, timeout=timeout, filter="ip", store=True, quiet=True)
+            received_byte = None
+            packet_count = 0
+            max_packets = int(timeout * 10)
+            stop_sniff = threading.Event()
 
-            if not packets:
-                return None
-
-            for packet in packets:
+            def packet_handler(packet):
+                nonlocal received_byte, packet_count
                 if IP in packet:
                     ttl = packet[IP].ttl
                     bit = self._extract_bit_from_ttl(ttl)
 
                     if bit is not None:
                         self.received_bits.append(bit)
+                        packet_count += 1
 
-                        # When we have 8 bits, convert to byte
                         if len(self.received_bits) >= 8:
                             byte_value = 0
                             for i in range(8):
-                                if i < len(self.received_bits):
-                                    byte_value |= self.received_bits[i] << i
+                                byte_value |= self.received_bits[i] << i
 
                             self.received_bits = self.received_bits[8:]
-                            return bytes([byte_value])
+                            received_byte = bytes([byte_value])
+                            stop_sniff.set()
 
-            return None
+            def sniff_thread():
+                try:
+                    sniff(filter="ip", prn=packet_handler, stop_filter=lambda x: stop_sniff.is_set(), store=False, quiet=True, timeout=timeout)
+                except Exception as e:
+                    logger.debug(f"Sniff thread error: {e}")
+
+            sniff_thread_obj = threading.Thread(target=sniff_thread, daemon=True)
+            sniff_thread_obj.start()
+
+            end_time = asyncio.get_event_loop().time() + timeout
+            while received_byte is None and asyncio.get_event_loop().time() < end_time:
+                if packet_count >= max_packets or stop_sniff.is_set():
+                    break
+                await asyncio.sleep(0.1)
+
+            stop_sniff.set()
+            return received_byte
 
         except Exception as e:
             logger.error(f"Error in TTL channel receive: {e}")
@@ -279,59 +294,63 @@ class TTLChannel(SteganographicChannel):
         Fallback implementation using raw sockets when scapy is not available.
         Requires root/administrator privileges.
         """
+        sock = None
         try:
-            # Create raw socket to capture IP packets
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
                 sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
                 sock.setblocking(False)
             except PermissionError:
-                logger.warning("Raw socket requires root privileges for TTL channel receive")
+                logger.warning("Raw socket requires root/administrator privileges for TTL channel receive")
+                return None
+            except OSError as e:
+                logger.warning(f"Could not create raw socket: {e}")
                 return None
 
-            # Try to receive multiple packets with timeout
             loop = asyncio.get_event_loop()
-            end_time = asyncio.get_event_loop().time() + timeout
+            end_time = loop.time() + timeout
 
-            try:
-                while asyncio.get_event_loop().time() < end_time:
-                    remaining_time = end_time - asyncio.get_event_loop().time()
-                    if remaining_time <= 0:
-                        break
+            while loop.time() < end_time:
+                remaining_time = end_time - loop.time()
+                if remaining_time <= 0:
+                    break
 
-                    try:
-                        packet_data, addr = await asyncio.wait_for(
-                            loop.sock_recvfrom(sock, 65535), timeout=min(remaining_time, 1.0)
-                        )
+                try:
+                    packet_data, addr = await asyncio.wait_for(
+                        loop.sock_recvfrom(sock, 65535), timeout=min(remaining_time, 1.0)
+                    )
 
-                        # Parse IP header to extract TTL (byte 8 in IP header)
-                        if len(packet_data) >= 20:  # Minimum IP header size
-                            ttl = packet_data[8]
-                            bit = self._extract_bit_from_ttl(ttl)
+                    if len(packet_data) >= 20:
+                        ttl = packet_data[8]
+                        bit = self._extract_bit_from_ttl(ttl)
 
-                            if bit is not None:
-                                self.received_bits.append(bit)
+                        if bit is not None:
+                            self.received_bits.append(bit)
 
-                                # When we have 8 bits, convert to byte
-                                if len(self.received_bits) >= 8:
-                                    byte_value = 0
-                                    for i in range(8):
-                                        if i < len(self.received_bits):
-                                            byte_value |= self.received_bits[i] << i
+                            if len(self.received_bits) >= 8:
+                                byte_value = 0
+                                for i in range(8):
+                                    byte_value |= self.received_bits[i] << i
 
-                                    self.received_bits = self.received_bits[8:]
-                                    sock.close()
-                                    return bytes([byte_value])
-                    except asyncio.TimeoutError:
-                        continue
-            finally:
-                sock.close()
+                                self.received_bits = self.received_bits[8:]
+                                return bytes([byte_value])
+                except asyncio.TimeoutError:
+                    continue
+                except OSError as e:
+                    logger.debug(f"Socket error in TTL receive: {e}")
+                    break
 
             return None
 
         except Exception as e:
             logger.error(f"Error in TTL fallback receive: {e}")
             return None
+        finally:
+            if sock:
+                try:
+                    sock.close()
+                except Exception:
+                    pass
 
     def _extract_bit_from_ttl(self, ttl: int) -> Optional[int]:
         """Extract hidden bit from TTL value."""
@@ -444,10 +463,20 @@ class DNSChannel(SteganographicChannel):
 
     async def _raw_socket_sniff(self):
         """Fallback DNS packet capture using raw socket."""
+        sock = None
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
-            sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
-            sock.setblocking(False)
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
+                sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+                sock.setblocking(False)
+            except PermissionError:
+                logger.warning("Raw socket requires root/administrator privileges for DNS capture")
+                self.is_listening = False
+                return
+            except OSError as e:
+                logger.warning(f"Could not create raw socket for DNS capture: {e}")
+                self.is_listening = False
+                return
 
             loop = asyncio.get_event_loop()
             while self.is_listening:
@@ -456,45 +485,88 @@ class DNSChannel(SteganographicChannel):
                         loop.sock_recvfrom(sock, 65535), timeout=1.0
                     )
 
-                    # Parse UDP header (starts at byte 20 after IP header)
-                    if len(packet_data) >= 28:
-                        src_port = struct.unpack("!H", packet_data[20:22])[0]
-                        dst_port = struct.unpack("!H", packet_data[22:24])[0]
+                    if len(packet_data) < 28:
+                        continue
 
-                        # Check if this is DNS (port 53)
-                        if src_port == 53 or dst_port == 53:
-                            # Parse DNS query (simplified)
-                            dns_data = packet_data[28:]
-                            if len(dns_data) > 12:
-                                # Extract query name (simplified parsing)
-                                qname_end = dns_data.find(b"\x00", 12)
-                                if qname_end > 12:
-                                    qname_bytes = dns_data[12:qname_end]
-                                    try:
-                                        qname = qname_bytes.decode("utf-8", errors="ignore")
-                                        if self.domain_base in qname:
-                                            subdomain = qname.split(".")[0]
-                                            try:
-                                                decoded = bytes.fromhex(subdomain)
-                                                await self.packet_queue.put(decoded)
-                                            except ValueError:
-                                                pass
-                                    except Exception:
-                                        pass
+                    ip_header_len = (packet_data[0] & 0x0F) * 4
+                    if len(packet_data) < ip_header_len + 8:
+                        continue
+
+                    udp_start = ip_header_len
+                    src_port = struct.unpack("!H", packet_data[udp_start : udp_start + 2])[0]
+                    dst_port = struct.unpack("!H", packet_data[udp_start + 2 : udp_start + 4])[0]
+
+                    if dst_port == 53:
+                        dns_start = udp_start + 8
+                        if len(packet_data) > dns_start + 12:
+                            qname_bytes = self._parse_dns_qname(packet_data, dns_start + 12)
+                            if qname_bytes:
+                                try:
+                                    qname = qname_bytes.decode("utf-8", errors="ignore")
+                                    if self.domain_base in qname:
+                                        subdomain = qname.split(".")[0]
+                                        try:
+                                            decoded = bytes.fromhex(subdomain)
+                                            await self.packet_queue.put(decoded)
+                                        except ValueError:
+                                            pass
+                                except Exception:
+                                    pass
                 except asyncio.TimeoutError:
                     continue
-                except PermissionError:
-                    logger.warning("Raw socket requires root privileges for DNS capture")
-                    break
+                except OSError as e:
+                    logger.debug(f"Socket error in DNS sniff: {e}")
+                    await asyncio.sleep(1.0)
                 except Exception as e:
                     logger.debug(f"Error in raw socket DNS sniff: {e}")
                     await asyncio.sleep(1.0)
 
-            sock.close()
-        except PermissionError:
-            logger.warning("Raw socket requires root privileges")
         except Exception as e:
-            logger.error(f"Error starting raw socket DNS sniffer: {e}")
+            logger.error(f"Error in raw socket DNS sniffer: {e}")
+        finally:
+            if sock:
+                try:
+                    sock.close()
+                except Exception:
+                    pass
+
+    def _parse_dns_qname(self, packet_data: bytes, offset: int) -> Optional[bytes]:
+        """Parse DNS query name from packet, handling compression pointers."""
+        try:
+            qname_parts = []
+            pos = offset
+            max_iterations = 128
+            iteration = 0
+
+            while iteration < max_iterations:
+                if pos >= len(packet_data):
+                    break
+
+                length = packet_data[pos]
+                if length == 0:
+                    break
+                elif (length & 0xC0) == 0xC0:
+                    pointer = ((length & 0x3F) << 8) | packet_data[pos + 1]
+                    if pointer < len(packet_data):
+                        pos = pointer
+                        continue
+                    else:
+                        break
+                else:
+                    pos += 1
+                    if pos + length > len(packet_data):
+                        break
+                    label = packet_data[pos : pos + length]
+                    qname_parts.append(label)
+                    pos += length
+
+                iteration += 1
+
+            if qname_parts:
+                return b".".join(qname_parts)
+            return None
+        except Exception:
+            return None
 
     def _stop_sniffer(self):
         """Stop DNS packet sniffer."""

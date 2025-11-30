@@ -42,7 +42,7 @@ in the `sush` namespace and can be wired together or exercised separately.
 
 ### Quantum Obfuscator (`sush.core.quantum_obfuscator`)
 
-- Generates an ML‑KEM key pair at startup (Kyber768 via `kyber-py`, with a deterministic mock fallback).
+- Generates an ML‑KEM key pair at startup (Kyber768 via `kyber-py` - hard requirement, no fallback).
 - Manages per-session shared secrets and derives AEAD keys through HKDF.
 - Provides `set_obfuscation_level()` that now accepts both symbolic (`"high"`) and numeric values.
 - Drives the `AdaptiveCipherSuite` and `TrafficMorphingEngine` used by higher layers.

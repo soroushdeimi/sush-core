@@ -319,17 +319,24 @@ class ConnectionHandler:
                 await self._send_data(b"ERROR:Invalid registration data")
                 return
 
-            # Verify signature if provided (TODO: strict verification)
+            signature = node_info.get("signature")
+            registration_data = json.dumps({"node_id": node_id, "public_key": public_key, "address": node_info.get("address"), "port": node_info.get("port")}, sort_keys=True)
 
-            # Register in node integrity system
+            if signature:
+                if not self.server.node_integrity._verify_signature(node_id, registration_data, signature):
+                    self.logger.warning(f"Invalid signature for node registration: {node_id}")
+                    await self._send_data(b"ERROR:Invalid signature")
+                    return
+            else:
+                self.logger.warning(f"Node registration without signature: {node_id}")
+
             await self.server.node_integrity.register_node(node_id, public_key)
 
             # Update node info with connectivity details
             host = node_info.get("address", self.client_address)
             port = node_info.get("port", 8080)
 
-            # Add to known nodes (using internal mirror network structure)
-            # We use a hack here to inject it into the mirror network's knowledge
+            # Add to known nodes in mirror network directory
             from .network.mirror_network import NodeInfo
 
             new_node = NodeInfo(

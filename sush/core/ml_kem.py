@@ -9,33 +9,29 @@ logger = logging.getLogger(__name__)
 
 try:
     from kyber_py.kyber768 import Kyber768
+except ImportError as e:
+    raise ImportError(
+        "CRITICAL SECURITY ERROR: kyber-py library is REQUIRED for ML-KEM-768 implementation.\n"
+        "This application CANNOT run securely without this dependency.\n"
+        "Install with: pip install kyber-py>=0.1.0\n"
+        "No fallback implementation exists - this is intentional for security."
+    ) from e
 
-    # Create a wrapper class to match expected interface
-    class KyberWrapper:
-        @staticmethod
-        def generate_keypair():
-            return Kyber768.keygen()
+class KyberWrapper:
+    @staticmethod
+    def generate_keypair():
+        return Kyber768.keygen()
 
-        @staticmethod
-        def encapsulate(pk):
-            return Kyber768.encaps(pk)
+    @staticmethod
+    def encapsulate(pk):
+        return Kyber768.encaps(pk)
 
-        @staticmethod
-        def decapsulate(c, sk):
-            return Kyber768.decaps(c, sk)
+    @staticmethod
+    def decapsulate(c, sk):
+        return Kyber768.decaps(c, sk)
 
-    KyberImpl = KyberWrapper
-    logger.info("Using external kyber-py implementation")
-except (ImportError, AttributeError):
-    # Fallback to internal implementation
-    try:
-        from .kyber_impl import Kyber768
-
-        KyberImpl = Kyber768
-        logger.info("Using internal pure-python Kyber-768 implementation")
-    except ImportError:
-        # This should not happen if kyber_impl.py exists
-        raise ImportError("Critical: No ML-KEM implementation found (external or internal)") from None
+KyberImpl = KyberWrapper
+logger.info("Using kyber-py ML-KEM-768 implementation")
 
 
 class MLKEMKeyExchange:
@@ -58,14 +54,7 @@ class MLKEMKeyExchange:
     def generate_keypair(self) -> tuple[bytes, bytes]:
         """Generate a new ML-KEM-768 public/private key pair."""
         try:
-            # Try generate_keypair first (our internal impl)
-            if hasattr(KyberImpl, "generate_keypair"):
-                return KyberImpl.generate_keypair()
-            # Fallback to keygen (kyber-py style)
-            elif hasattr(KyberImpl, "keygen"):
-                return KyberImpl.keygen()
-            else:
-                raise NotImplementedError("Unknown Kyber interface")
+            return KyberImpl.generate_keypair()
         except Exception as e:
             logger.error(f"Key generation failed: {e}")
             raise
@@ -78,16 +67,7 @@ class MLKEMKeyExchange:
             )
 
         try:
-            # Try enc first (our internal impl matches this style usually or enc)
-            if hasattr(KyberImpl, "enc"):
-                return KyberImpl.enc(public_key)
-            elif hasattr(KyberImpl, "encapsulate"):
-                return KyberImpl.encapsulate(public_key)
-            # Fallback to encaps (kyber-py style)
-            elif hasattr(KyberImpl, "encaps"):
-                return KyberImpl.encaps(public_key)
-            else:
-                raise NotImplementedError("Unknown Kyber interface")
+            return KyberImpl.encapsulate(public_key)
         except Exception as e:
             logger.error(f"Encapsulation failed: {e}")
             raise
@@ -100,14 +80,7 @@ class MLKEMKeyExchange:
             )
 
         try:
-            if hasattr(KyberImpl, "dec"):
-                return KyberImpl.dec(ciphertext, private_key)
-            elif hasattr(KyberImpl, "decapsulate"):
-                return KyberImpl.decapsulate(ciphertext, private_key)
-            elif hasattr(KyberImpl, "decaps"):
-                return KyberImpl.decaps(ciphertext, private_key)
-            else:
-                raise NotImplementedError("Unknown Kyber interface")
+            return KyberImpl.decapsulate(ciphertext, private_key)
         except Exception as e:
             logger.error(f"Decapsulation failed: {e}")
             raise
