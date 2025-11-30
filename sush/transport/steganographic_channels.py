@@ -232,8 +232,6 @@ class TTLChannel(SteganographicChannel):
         Requires root/administrator privileges.
         """
         try:
-            import struct
-
             # Create raw socket to capture IP packets
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
@@ -332,7 +330,7 @@ class DNSChannel(SteganographicChannel):
         # For now, we can use a DNS packet sniffer if scapy is available
         if SCAPY_AVAILABLE:
             try:
-                from scapy.all import sniff, DNS, IP
+                from scapy.all import sniff, DNS
 
                 # Sniff DNS packets with timeout
                 packets = sniff(count=1, timeout=1.0, filter="udp port 53", store=True)

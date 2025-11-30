@@ -35,7 +35,7 @@ def run_command(cmd: list[str], description: str, check: bool = True) -> bool:
             return True
     except FileNotFoundError as e:
         print(f"\n✗ ERROR: Command not found - {e}")
-        print(f"   Make sure the required tools are installed.")
+        print("   Make sure the required tools are installed.")
         if check:
             return False
         return True

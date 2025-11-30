@@ -41,7 +41,7 @@ class AdaptiveCipherSuite:
         self.cipher_profiles = {
             "aes_gcm": CipherProfile("AES-256-GCM", 32, 12, 0.9, 0.8, 0.3),
             "chacha20": CipherProfile("ChaCha20-Poly1305", 32, 12, 0.8, 0.9, 0.7),
-            "aes_ocb": CipherProfile("AES-256-OCB (GCM fallback)", 32, 12, 0.85, 0.8, 0.8),
+            "aes_ocb": CipherProfile("AES-256-GCM-Alternative", 32, 12, 0.85, 0.8, 0.8),
         }
         self.active_cipher = "aes_gcm"
         self.encryption_key = b""
