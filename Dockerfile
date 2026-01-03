@@ -97,7 +97,8 @@ WORKDIR /app
 COPY --chown=sush:sush sush/ ./sush/
 COPY --chown=sush:sush examples/ ./examples/
 COPY --chown=sush:sush config/ ./config/
-COPY --chown=sush:sush setup.py README.md requirements.txt ./
+COPY --chown=sush:sush tests/ ./tests/
+COPY --chown=sush:sush setup.py README.md requirements.txt run_tests.py ./
 
 # Install application in production mode
 RUN pip install --no-cache-dir . && \
