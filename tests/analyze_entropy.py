@@ -9,12 +9,8 @@ traffic indistinguishability from random noise.
 import asyncio
 import math
 import sys
-import time
 from collections import Counter
 from pathlib import Path
-from typing import Tuple
-
-import numpy as np
 
 try:
     from scipy import stats
@@ -27,10 +23,8 @@ except ImportError:
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from sush.client import ClientConfig, SushClient
 from sush.core.quantum_obfuscator import QuantumObfuscator
 from sush.core.traffic_morphing import PaddingProfile, TrafficMorphingEngine
-from sush.transport.adaptive_transport import AdaptiveTransport, TransportMode
 
 OUTPUT_FILE = Path("tests/data/entropy_analysis.txt")
 

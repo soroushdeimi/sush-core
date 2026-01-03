@@ -14,7 +14,6 @@ import socket
 import sys
 import time
 from pathlib import Path
-from typing import Any
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -28,7 +27,6 @@ from sush.control.response_engine import ResponseEngine
 from sush.control.threat_monitor import ThreatMonitor
 from sush.core.quantum_obfuscator import QuantumObfuscator
 from sush.core.traffic_morphing import PaddingProfile, TrafficMorphingEngine
-from sush.network.mirror_network import MirrorNetwork
 from sush.server import ServerConfig, SushServer
 from sush.transport.adaptive_transport import AdaptiveTransport, TransportMode
 

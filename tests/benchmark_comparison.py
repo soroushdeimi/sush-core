@@ -12,15 +12,12 @@ import logging
 import sys
 import time
 from pathlib import Path
-from typing import Dict, Optional
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from sush.client import ClientConfig, SushClient
 from sush.server import ServerConfig, SushServer
 
 logging.basicConfig(

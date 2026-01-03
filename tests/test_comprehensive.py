@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Documentation and packaging alignment tests for sushCore."""
 
-import os
-import sys
 import unittest
 from pathlib import Path
 

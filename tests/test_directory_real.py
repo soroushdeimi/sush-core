@@ -3,7 +3,6 @@ import json
 import logging
 import os
 import sys
-import time
 
 # Add project root to path
 sys.path.append(os.getcwd())
@@ -39,7 +38,6 @@ mock_ml_kem_mod = types.ModuleType("sush.core.ml_kem")
 mock_ml_kem_mod.MLKEMKeyExchange = MockMLKEM
 sys.modules["sush.core.ml_kem"] = mock_ml_kem_mod
 
-from sush.network.mirror_network import NodeInfo
 from sush.server import ServerConfig, SushServer
 
 # Configure logging

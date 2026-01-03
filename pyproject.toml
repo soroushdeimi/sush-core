@@ -19,29 +19,22 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+# Tests often import modules just to verify they're importable
 "tests/*" = [
-    "E501",
-    "F401",
-    "F841",
-    "B006",
-    "E402",
-    "E722",
-    "UP006",
-    "UP035",
+    "E501",  # Line too long - tests often have long assertions
+    "F401",  # Unused imports - tests verify import success without using
+    "B006",  # Mutable default arguments in test fixtures
+    "E402",  # Module level import not at top - test setup
 ]
 "tools/*" = [
-    "E402",
-    "E741",
-    "F841",
-    "UP006",
-    "UP035",
+    "E402",  # Module level import not at top
+    "E741",  # Ambiguous variable name (l, O, I)
 ]
 "data/*" = [
-    "UP006",
-    "UP035",
+    "E402",  # Module level import not at top
 ]
 "__init__.py" = [
-    "F401",
+    "F401",  # Unused imports - expected in __init__.py for re-exports
 ]
 
 [tool.ruff.lint.isort]

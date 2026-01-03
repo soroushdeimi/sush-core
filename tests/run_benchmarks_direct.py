@@ -2,7 +2,6 @@
 """Run benchmarks with direct file output."""
 
 import asyncio
-import csv
 import sys
 import time
 from pathlib import Path
