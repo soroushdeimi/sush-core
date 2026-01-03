@@ -66,15 +66,12 @@ docs/.doctrees/
 requirements-dev.txt
 .pre-commit-config.yaml
 ruff.toml
-pyproject.toml
 Makefile
 run_ci_local.py
-run_tests.py
 
-# Test files
-tests/
-test_*.py
-*_test.py
+# Keep tests/ directory and run_tests.py for CI
+!tests/
+!run_tests.py
 
 # Development scripts
 scripts/
