@@ -18,6 +18,7 @@ import numpy as np
 
 try:
     from scipy import stats
+
     SCIPY_AVAILABLE = True
 except ImportError:
     SCIPY_AVAILABLE = False
@@ -28,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sush.client import ClientConfig, SushClient
 from sush.core.quantum_obfuscator import QuantumObfuscator
-from sush.core.traffic_morphing import TrafficMorphingEngine, PaddingProfile
+from sush.core.traffic_morphing import PaddingProfile, TrafficMorphingEngine
 from sush.transport.adaptive_transport import AdaptiveTransport, TransportMode
 
 OUTPUT_FILE = Path("tests/data/entropy_analysis.txt")
@@ -37,53 +38,51 @@ OUTPUT_FILE = Path("tests/data/entropy_analysis.txt")
 def calculate_shannon_entropy(data: bytes) -> float:
     """
     Calculate Shannon entropy of a byte stream.
-    
+
     Returns:
         Entropy in bits per byte (max 8.0 for uniform random data)
     """
     if len(data) == 0:
         return 0.0
-    
+
     # Count byte frequencies
     byte_counts = Counter(data)
     data_length = len(data)
-    
+
     # Calculate entropy
     entropy = 0.0
     for count in byte_counts.values():
         probability = count / data_length
         if probability > 0:
             entropy -= probability * math.log2(probability)
-    
+
     return entropy
 
 
-def chi_square_uniformity_test(data: bytes) -> Tuple[float, float]:
+def chi_square_uniformity_test(data: bytes) -> tuple[float, float]:
     """
     Perform Chi-Square test for uniformity.
-    
+
     Returns:
         (chi_square_statistic, p_value)
         p_value > 0.05 indicates uniform distribution (indistinguishable from random)
     """
     if len(data) == 0:
         return (0.0, 0.0)
-    
+
     # Count byte frequencies
     byte_counts = Counter(data)
     observed = [byte_counts.get(i, 0) for i in range(256)]
-    
+
     # Expected frequency (uniform distribution)
     expected_freq = len(data) / 256.0
-    
+
     # Calculate chi-square statistic
-    chi_square = sum(
-        ((obs - expected_freq) ** 2) / expected_freq for obs in observed
-    )
-    
+    chi_square = sum(((obs - expected_freq) ** 2) / expected_freq for obs in observed)
+
     # Degrees of freedom: 256 - 1 = 255
     degrees_of_freedom = 255
-    
+
     # Calculate p-value
     if SCIPY_AVAILABLE:
         p_value = 1.0 - stats.chi2.cdf(chi_square, degrees_of_freedom)
@@ -92,35 +91,34 @@ def chi_square_uniformity_test(data: bytes) -> Tuple[float, float]:
         # Use normal approximation: Z = (X - df) / sqrt(2*df)
         z = (chi_square - degrees_of_freedom) / (2 * degrees_of_freedom) ** 0.5
         import math
+
         try:
             # Approximate standard normal CDF using error function
             # Φ(z) ≈ 0.5 * (1 + erf(z/sqrt(2)))
             # P(X > chi_square) ≈ 1 - Φ(z)
-            p_value = 0.5 * (1 - math.erf(z / (2 ** 0.5)))
+            p_value = 0.5 * (1 - math.erf(z / (2**0.5)))
             # Ensure p-value is in valid range
             p_value = max(0.0, min(1.0, p_value))
-        except:
+        except (ValueError, OverflowError):
             # Fallback: if chi-square is close to df, p-value is high (uniform)
             # If chi-square >> df, p-value is low (non-uniform)
             if chi_square < degrees_of_freedom * 1.5:
                 p_value = 0.5  # Likely uniform
             else:
                 p_value = 0.01  # Likely non-uniform
-    
+
     return (chi_square, p_value)
 
 
-def analyze_traffic_entropy(
-    data: bytes, label: str = "Traffic"
-) -> dict:
+def analyze_traffic_entropy(data: bytes, label: str = "Traffic") -> dict:
     """Analyze entropy and uniformity of traffic data."""
     entropy = calculate_shannon_entropy(data)
     chi_square, p_value = chi_square_uniformity_test(data)
-    
+
     # Interpretation
     entropy_score = "Excellent" if entropy >= 7.9 else "Good" if entropy >= 7.5 else "Fair"
     uniformity = "Uniform (indistinguishable)" if p_value > 0.05 else "Non-uniform (detectable)"
-    
+
     return {
         "label": label,
         "data_size_bytes": len(data),
@@ -139,57 +137,54 @@ async def generate_obfuscated_traffic(
 ) -> bytes:
     """
     Generate obfuscated traffic using sushCore components.
-    
+
     Args:
         size_mb: Size in megabytes
         use_steganographic: Use steganographic mode
-    
+
     Returns:
         Obfuscated byte stream
     """
     print(f"Generating {size_mb}MB of obfuscated traffic...")
-    
+
     obfuscator = QuantumObfuscator()
     morphing_engine = TrafficMorphingEngine()
-    
+
     # Generate peer keypair
     peer_pub, _ = obfuscator.kem.generate_keypair()
-    
+
     # Initialize session
     session_id = "entropy_test_session"
     await obfuscator.initialize_session(session_id, peer_pub)
-    
+
     # Generate payload
     import os
+
     payload_size = int(size_mb * 1024 * 1024)
     payload = os.urandom(payload_size)
-    
+
     # Obfuscate data
     print("Obfuscating data...")
     obfuscated_packets = await obfuscator.obfuscate_data(session_id, payload)
-    
+
     # obfuscate_data returns list[bytes], concatenate them
     if obfuscated_packets:
         obfuscated = b"".join(obfuscated_packets)
     else:
         obfuscated = b""
-    
+
     # Apply traffic morphing
     print("Applying traffic morphing...")
     try:
         if use_steganographic:
-            morphed = morphing_engine.obfuscate_data(
-                obfuscated, PaddingProfile.PARANOID
-            )
+            morphed = morphing_engine.obfuscate_data(obfuscated, PaddingProfile.PARANOID)
         else:
-            morphed = morphing_engine.obfuscate_data(
-                obfuscated, PaddingProfile.INTERACTIVE
-            )
+            morphed = morphing_engine.obfuscate_data(obfuscated, PaddingProfile.INTERACTIVE)
     except Exception as e:
         # Fallback: just use obfuscated data if morphing fails
         print(f"Warning: Traffic morphing failed ({e}), using obfuscated data only")
         morphed = obfuscated
-    
+
     return morphed
 
 
@@ -198,21 +193,22 @@ async def main():
     print("=" * 70)
     print("sushCore Entropy & Indistinguishability Analysis")
     print("=" * 70)
-    
+
     results = []
-    
+
     # Test 1: Random data (baseline)
     print("\n" + "=" * 70)
     print("Test 1: Random Data (Baseline)")
     print("=" * 70)
     import os
+
     random_data = os.urandom(1024 * 1024)  # 1MB
     result1 = analyze_traffic_entropy(random_data, "Random Data (Baseline)")
     results.append(result1)
     print(f"Shannon Entropy: {result1['shannon_entropy']:.4f} bits/byte")
     print(f"Chi-Square p-value: {result1['chi_square_p_value']:.6f}")
     print(f"Assessment: {result1['uniformity_assessment']}")
-    
+
     # Test 2: Obfuscated traffic (PARANOID mode)
     print("\n" + "=" * 70)
     print("Test 2: Obfuscated Traffic (PARANOID mode)")
@@ -223,7 +219,7 @@ async def main():
     print(f"Shannon Entropy: {result2['shannon_entropy']:.4f} bits/byte")
     print(f"Chi-Square p-value: {result2['chi_square_p_value']:.6f}")
     print(f"Assessment: {result2['uniformity_assessment']}")
-    
+
     # Test 3: Obfuscated traffic (INTERACTIVE mode)
     print("\n" + "=" * 70)
     print("Test 3: Obfuscated Traffic (INTERACTIVE mode)")
@@ -234,7 +230,7 @@ async def main():
     print(f"Shannon Entropy: {result3['shannon_entropy']:.4f} bits/byte")
     print(f"Chi-Square p-value: {result3['chi_square_p_value']:.6f}")
     print(f"Assessment: {result3['uniformity_assessment']}")
-    
+
     # Summary
     print("\n" + "=" * 70)
     print("Summary")
@@ -248,14 +244,14 @@ async def main():
             f"{result['chi_square_p_value']:>10.6f}  "
             f"{'✓' if result['is_indistinguishable'] else '✗'}"
         )
-    
+
     # Save results
     print(f"\nSaving results to {OUTPUT_FILE}...")
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         f.write("=" * 70 + "\n")
         f.write("sushCore Entropy & Indistinguishability Analysis\n")
         f.write("=" * 70 + "\n\n")
-        
+
         for result in results:
             f.write(f"Test: {result['label']}\n")
             f.write(f"  Data Size: {result['data_size_bytes']:,} bytes\n")
@@ -266,14 +262,14 @@ async def main():
             f.write(f"  Uniformity: {result['uniformity_assessment']}\n")
             f.write(f"  Indistinguishable: {'Yes' if result['is_indistinguishable'] else 'No'}\n")
             f.write("\n")
-        
+
         f.write("=" * 70 + "\n")
         f.write("Interpretation:\n")
         f.write("- Entropy >= 7.9: Excellent (nearly indistinguishable from random)\n")
         f.write("- Entropy >= 7.5: Good (very difficult to distinguish)\n")
         f.write("- p-value > 0.05: Uniform distribution (indistinguishable from random)\n")
         f.write("=" * 70 + "\n")
-    
+
     print(f"Results saved to {OUTPUT_FILE}")
     print("\n" + "=" * 70)
     print("Entropy analysis completed!")
@@ -282,4 +278,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-

@@ -82,7 +82,7 @@ def plot_crypto_overhead(df):
     bars = ax.bar(x, time_per_mb, width, yerr=std_values, alpha=0.8, capsize=5, color="steelblue")
 
     # Add value labels
-    for i, (bar, val) in enumerate(zip(bars, time_per_mb)):
+    for _i, (bar, val) in enumerate(zip(bars, time_per_mb)):
         if not np.isnan(val) and val > 0:
             ax.text(
                 bar.get_x() + bar.get_width() / 2.0,
@@ -98,10 +98,7 @@ def plot_crypto_overhead(df):
     ax.set_title("Crypto Overhead Analysis: Encryption Time per MB")
     ax.set_xticks(x)
     ax.set_xticklabels(
-        [
-            f"{s/1024:.0f}KB" if s < 1024 * 1024 else f"{s/(1024*1024):.0f}MB"
-            for s in sizes
-        ]
+        [f"{s / 1024:.0f}KB" if s < 1024 * 1024 else f"{s / (1024 * 1024):.0f}MB" for s in sizes]
     )
     ax.grid(True, alpha=0.3, axis="y")
 
@@ -179,7 +176,7 @@ def plot_throughput_comparison(df):
             transform=ax.transAxes,
             ha="center",
             va="top",
-            bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5),
+            bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.5},
             fontsize=10,
         )
 
@@ -213,7 +210,9 @@ def plot_reaction_time(df):
     reaction_times = exp_c["reaction_time_ms"].values
 
     # Plot attack event
-    ax.axvline(x=attack_time, color="red", linestyle="--", linewidth=2, label="Attack Injected (T=0)")
+    ax.axvline(
+        x=attack_time, color="red", linestyle="--", linewidth=2, label="Attack Injected (T=0)"
+    )
 
     # Plot adaptation events
     for i, reaction_time in enumerate(reaction_times):
@@ -231,7 +230,7 @@ def plot_reaction_time(df):
             f"{reaction_time:.1f}ms",
             xy=(reaction_time, 0.5),
             xytext=(reaction_time, 0.7),
-            arrowprops=dict(arrowstyle="->", color="green", alpha=0.7),
+            arrowprops={"arrowstyle": "->", "color": "green", "alpha": 0.7},
             fontsize=9,
             ha="center",
         )
@@ -266,7 +265,7 @@ def plot_reaction_time(df):
         transform=ax.transAxes,
         ha="left",
         va="top",
-        bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5),
+        bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.5},
         fontsize=10,
         family="monospace",
     )
@@ -293,7 +292,7 @@ def generate_summary_statistics(df):
         for size in sorted(exp_a["payload_size_bytes"].unique()):
             size_data = exp_a[exp_a["payload_size_bytes"] == size]
             print(
-                f"  {size/1024:.0f}KB: "
+                f"  {size / 1024:.0f}KB: "
                 f"Avg={size_data['avg_total_time_ms'].iloc[0]:.2f}ms, "
                 f"Throughput={size_data['throughput_mbps'].iloc[0]:.2f} Mbps"
             )
@@ -317,12 +316,8 @@ def generate_summary_statistics(df):
     if not exp_c_valid.empty:
         print("\nExperiment C: Adaptive Response Time")
         print("-" * 60)
-        print(
-            f"  Mean Reaction Time: {exp_c_valid['reaction_time_ms'].mean():.2f}ms"
-        )
-        print(
-            f"  Std Deviation: {exp_c_valid['reaction_time_ms'].std():.2f}ms"
-        )
+        print(f"  Mean Reaction Time: {exp_c_valid['reaction_time_ms'].mean():.2f}ms")
+        print(f"  Std Deviation: {exp_c_valid['reaction_time_ms'].std():.2f}ms")
         print(f"  Samples: {len(exp_c_valid)}")
 
 
@@ -350,4 +345,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

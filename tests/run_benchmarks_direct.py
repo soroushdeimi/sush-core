@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Run benchmarks with direct file output."""
 
-import sys
 import asyncio
 import csv
+import sys
 import time
 from pathlib import Path
 
@@ -16,11 +16,13 @@ OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 LOG_FILE = Path("tests/data/benchmark_run.log")
 
+
 def log(msg):
     """Log to both console and file."""
     print(msg)
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {msg}\n")
+
 
 async def main():
     log("=" * 60)
@@ -57,16 +59,17 @@ async def main():
     except Exception as e:
         log(f"✗ Benchmark failed: {e}")
         import traceback
+
         traceback.print_exc()
         with open(LOG_FILE, "a", encoding="utf-8") as f:
             traceback.print_exc(file=f)
         return False
 
+
 if __name__ == "__main__":
     # Clear log file
     if LOG_FILE.exists():
         LOG_FILE.unlink()
-    
+
     success = asyncio.run(main())
     sys.exit(0 if success else 1)
-

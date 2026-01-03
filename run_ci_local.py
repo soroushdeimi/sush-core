@@ -35,10 +35,10 @@ def run_command(cmd: list[str], description: str, check: bool = True) -> bool:
             return True
     except FileNotFoundError as e:
         print(f"\n✗ ERROR: Command not found - {e}")
-        print(f"   Make sure the required tools are installed.")
+        print("   Make sure the required tools are installed.")
         if "ruff" in str(cmd):
-            print(f"   Install dev dependencies: pip install -r requirements-dev.txt")
-            print(f"   Or install ruff directly: pip install ruff")
+            print("   Install dev dependencies: pip install -r requirements-dev.txt")
+            print("   Or install ruff directly: pip install ruff")
         if check:
             return False
         return True

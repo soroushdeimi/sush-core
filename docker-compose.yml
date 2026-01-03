@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile
       args:
         VERSION: 1.2.0
+        BUILD_DATE: "${BUILD_DATE:-unknown}"
+        VCS_REF: "${VCS_REF:-unknown}"
     image: sush-core:latest
     container_name: sush-server
     restart: unless-stopped
@@ -15,7 +17,7 @@ services:
       - "8080:8080"
     environment:
       - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=INFO
+      - SUSH_LOG_LEVEL=INFO
     volumes:
       - ./config:/app/config:ro
     command: ["python", "examples/server_example.py", "--mode", "basic", "--address", "0.0.0.0", "--ports", "8443", "8080"]
@@ -27,17 +29,31 @@ services:
       start_period: 40s
     networks:
       - sush-network
+    # Security hardening
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
     cap_add:
       - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /tmp:size=100M,mode=1777
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
 
   sush-bridge:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VERSION: 1.2.0
     image: sush-core:latest
     container_name: sush-bridge
     restart: unless-stopped
@@ -47,13 +63,27 @@ services:
       - "53:53/udp"
     environment:
       - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=INFO
+      - SUSH_LOG_LEVEL=INFO
     command: ["python", "examples/server_example.py", "--mode", "bridge", "--address", "0.0.0.0", "--ports", "443", "80", "53"]
     networks:
       - sush-network
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /tmp:size=100M,mode=1777
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
 
 networks:
   sush-network:
     driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1500

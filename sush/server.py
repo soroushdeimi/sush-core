@@ -320,10 +320,20 @@ class ConnectionHandler:
                 return
 
             signature = node_info.get("signature")
-            registration_data = json.dumps({"node_id": node_id, "public_key": public_key, "address": node_info.get("address"), "port": node_info.get("port")}, sort_keys=True)
+            registration_data = json.dumps(
+                {
+                    "node_id": node_id,
+                    "public_key": public_key,
+                    "address": node_info.get("address"),
+                    "port": node_info.get("port"),
+                },
+                sort_keys=True,
+            )
 
             if signature:
-                if not self.server.node_integrity._verify_signature(node_id, registration_data, signature):
+                if not self.server.node_integrity._verify_signature(
+                    node_id, registration_data, signature
+                ):
                     self.logger.warning(f"Invalid signature for node registration: {node_id}")
                     await self._send_data(b"ERROR:Invalid signature")
                     return
@@ -631,7 +641,7 @@ class SushServer:
         try:
             # Bootstrap network connection (may fail if no bootstrap nodes configured)
             bootstrap_success = await self.mirror_network.bootstrap_network()
-            
+
             # Announce node presence (only if we have known nodes)
             if bootstrap_success or self.mirror_network.known_nodes:
                 await self.mirror_network.announce_node()

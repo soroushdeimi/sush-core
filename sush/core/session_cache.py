@@ -11,9 +11,6 @@ import time
 from dataclasses import dataclass
 from typing import Optional
 
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-
 
 @dataclass
 class CachedSession:
@@ -31,7 +28,7 @@ class CachedSession:
 class SessionCache:
     """
     LRU cache for session resumption.
-    
+
     Caches ML-KEM shared secrets and derived keys to avoid
     expensive key exchange on session resumption.
     """
@@ -92,9 +89,7 @@ class SessionCache:
 
         self.logger.debug(f"Cached session {session_id} for resumption")
 
-    def get_session(
-        self, peer_public_key: bytes
-    ) -> Optional[tuple[bytes, dict[str, bytes]]]:
+    def get_session(self, peer_public_key: bytes) -> Optional[tuple[bytes, dict[str, bytes]]]:
         """
         Retrieve cached session data.
 
@@ -125,9 +120,7 @@ class SessionCache:
         cached.use_count += 1
         self._update_access_order(cache_key)
 
-        self.logger.debug(
-            f"Resumed session {cached.session_id} (use count: {cached.use_count})"
-        )
+        self.logger.debug(f"Resumed session {cached.session_id} (use count: {cached.use_count})")
 
         return (cached.shared_secret, cached.derived_keys)
 
@@ -157,9 +150,7 @@ class SessionCache:
         """
         now = time.time()
         expired_keys = [
-            key
-            for key, cached in self.cache.items()
-            if now - cached.created_at > self.ttl
+            key for key, cached in self.cache.items() if now - cached.created_at > self.ttl
         ]
 
         for key in expired_keys:
@@ -184,4 +175,3 @@ class SessionCache:
             "total_resumptions": total_uses,
             "max_size": self.max_size,
         }
-

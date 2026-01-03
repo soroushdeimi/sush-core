@@ -139,7 +139,7 @@ async def test_functional_components():
     # Adaptive transport lifecycle (partial)
     print("  Testing adaptive transport configuration...")
     transport = AdaptiveTransport()
-    transport.configure({"enable_steganography": True, "enable_traffic_morphing": True})
+    await transport.configure({"enable_steganography": True, "enable_traffic_morphing": True})
     status = transport.get_status()
     assert isinstance(status, dict)
 

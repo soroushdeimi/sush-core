@@ -58,7 +58,7 @@ class QuantumObfuscator:
     ) -> ObfuscationContext:
         """
         Initialize a new obfuscation session with a peer.
-        
+
         Attempts to resume from cache if available, otherwise performs full handshake.
 
         Args:

@@ -282,7 +282,7 @@ class CensorshipDetector:
     ):
         """
         Train ML models with provided or collected data.
-        
+
         Note: If pre-trained models are available, this method will use them.
         Otherwise, it falls back to training on synthetic data.
         """
@@ -376,7 +376,7 @@ class CensorshipDetector:
     def _load_models(self) -> bool:
         """
         Load trained ML models from disk.
-        
+
         Returns:
             True if models were successfully loaded, False otherwise
         """

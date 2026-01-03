@@ -503,8 +503,12 @@ class AdaptiveControlLoop:
             if self.mirror_network:
                 # MirrorNetwork doesn't have get_performance_metrics, use stats instead
                 network_metrics = {
-                    "active_nodes": len(self.mirror_network.known_nodes) if self.mirror_network else 0,
-                    "active_circuits": len(self.mirror_network.active_circuits) if self.mirror_network else 0,
+                    "active_nodes": len(self.mirror_network.known_nodes)
+                    if self.mirror_network
+                    else 0,
+                    "active_circuits": len(self.mirror_network.active_circuits)
+                    if self.mirror_network
+                    else 0,
                     "status": str(self.mirror_network.status) if self.mirror_network else "UNKNOWN",
                 }
 

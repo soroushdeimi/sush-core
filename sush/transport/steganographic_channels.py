@@ -240,8 +240,9 @@ class TTLChannel(SteganographicChannel):
             return await self._receive_data_fallback(timeout)
 
         try:
-            from scapy.all import IP, sniff
             import threading
+
+            from scapy.all import IP, sniff
 
             received_byte = None
             packet_count = 0
@@ -269,7 +270,14 @@ class TTLChannel(SteganographicChannel):
 
             def sniff_thread():
                 try:
-                    sniff(filter="ip", prn=packet_handler, stop_filter=lambda x: stop_sniff.is_set(), store=False, quiet=True, timeout=timeout)
+                    sniff(
+                        filter="ip",
+                        prn=packet_handler,
+                        stop_filter=lambda x: stop_sniff.is_set(),
+                        store=False,
+                        quiet=True,
+                        timeout=timeout,
+                    )
                 except Exception as e:
                     logger.debug(f"Sniff thread error: {e}")
 
@@ -301,7 +309,9 @@ class TTLChannel(SteganographicChannel):
                 sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
                 sock.setblocking(False)
             except PermissionError:
-                logger.warning("Raw socket requires root/administrator privileges for TTL channel receive")
+                logger.warning(
+                    "Raw socket requires root/administrator privileges for TTL channel receive"
+                )
                 return None
             except OSError as e:
                 logger.warning(f"Could not create raw socket: {e}")
@@ -493,7 +503,8 @@ class DNSChannel(SteganographicChannel):
                         continue
 
                     udp_start = ip_header_len
-                    src_port = struct.unpack("!H", packet_data[udp_start : udp_start + 2])[0]
+                    # Parse source and destination ports from UDP header
+                    # src_port at offset 0-2, dst_port at offset 2-4
                     dst_port = struct.unpack("!H", packet_data[udp_start + 2 : udp_start + 4])[0]
 
                     if dst_port == 53:

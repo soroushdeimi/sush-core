@@ -26,15 +26,15 @@ async def test_resumption_performance():
 
     # First session (full handshake)
     start = time.perf_counter()
-    session1 = await obfuscator_enabled.initialize_session("session1", peer_pub)
+    await obfuscator_enabled.initialize_session("session1", peer_pub)
     time_full = time.perf_counter() - start
-    print(f"   First session (full handshake): {time_full*1000:.3f}ms")
+    print(f"   First session (full handshake): {time_full * 1000:.3f}ms")
 
     # Second session (should resume)
     start = time.perf_counter()
-    session2 = await obfuscator_enabled.initialize_session("session2", peer_pub)
+    await obfuscator_enabled.initialize_session("session2", peer_pub)
     time_resumed = time.perf_counter() - start
-    print(f"   Second session (resumed):       {time_resumed*1000:.3f}ms")
+    print(f"   Second session (resumed):       {time_resumed * 1000:.3f}ms")
 
     improvement = ((time_full - time_resumed) / time_full) * 100
     speedup = time_full / time_resumed if time_resumed > 0 else 0
@@ -48,15 +48,15 @@ async def test_resumption_performance():
 
     # First session
     start = time.perf_counter()
-    session3 = await obfuscator_disabled.initialize_session("session3", peer_pub)
+    await obfuscator_disabled.initialize_session("session3", peer_pub)
     time_no_resume_1 = time.perf_counter() - start
-    print(f"   First session:  {time_no_resume_1*1000:.3f}ms")
+    print(f"   First session:  {time_no_resume_1 * 1000:.3f}ms")
 
     # Second session (also full handshake)
     start = time.perf_counter()
-    session4 = await obfuscator_disabled.initialize_session("session4", peer_pub)
+    await obfuscator_disabled.initialize_session("session4", peer_pub)
     time_no_resume_2 = time.perf_counter() - start
-    print(f"   Second session: {time_no_resume_2*1000:.3f}ms")
+    print(f"   Second session: {time_no_resume_2 * 1000:.3f}ms")
 
     # Stats
     if obfuscator_enabled.session_cache:
@@ -69,10 +69,10 @@ async def test_resumption_performance():
 
     print("\n" + "=" * 60)
     print("Summary:")
-    print(f"  Full handshake:     {time_full*1000:.3f}ms")
-    print(f"  Resumed session:    {time_resumed*1000:.3f}ms")
+    print(f"  Full handshake:     {time_full * 1000:.3f}ms")
+    print(f"  Resumed session:    {time_resumed * 1000:.3f}ms")
     print(f"  Speedup:            {speedup:.1f}x")
-    print(f"  Time saved:         {(time_full - time_resumed)*1000:.3f}ms per session")
+    print(f"  Time saved:         {(time_full - time_resumed) * 1000:.3f}ms per session")
     print("=" * 60)
 
     return {
@@ -86,4 +86,3 @@ async def test_resumption_performance():
 if __name__ == "__main__":
     results = asyncio.run(test_resumption_performance())
     sys.exit(0)
-

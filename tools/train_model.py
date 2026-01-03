@@ -13,8 +13,9 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-import numpy as np
 import pickle
+
+import numpy as np
 from sklearn.ensemble import IsolationForest
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
@@ -84,7 +85,7 @@ def train_models(num_samples: int = 10000, output_path: str = "models/censorship
     print(f"  Threat Classifier Accuracy: {classifier_score:.3f}")
 
     # Anomaly detection evaluation
-    anomaly_predictions = anomaly_detector.predict(X_test_scaled)
+    anomaly_detector.predict(X_test_scaled)
     normal_test_data = [X_test_scaled[i] for i, label in enumerate(y_test) if label == 0]
     if normal_test_data:
         normal_predictions = anomaly_detector.predict(normal_test_data)
@@ -113,7 +114,7 @@ def train_models(num_samples: int = 10000, output_path: str = "models/censorship
     print("\n" + "=" * 60)
     print("Training completed successfully!")
     print("=" * 60)
-    print(f"\nTo use these models, ensure CensorshipDetector loads from:")
+    print("\nTo use these models, ensure CensorshipDetector loads from:")
     print(f"  {model_file}")
 
 
@@ -137,4 +138,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     train_models(num_samples=args.samples, output_path=args.output)
-

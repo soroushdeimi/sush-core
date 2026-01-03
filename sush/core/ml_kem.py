@@ -1,4 +1,11 @@
-"""ML-KEM quantum-resistant key exchange."""
+"""ML-KEM quantum-resistant key exchange.
+
+This module provides post-quantum key exchange using ML-KEM-768 (formerly Kyber768).
+The implementation uses the kyber-py library which provides a FIPS 203 compliant
+implementation of the ML-KEM algorithm.
+"""
+
+from __future__ import annotations
 
 import logging
 
@@ -7,31 +14,75 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 logger = logging.getLogger(__name__)
 
+# Try to import from kyber-py library (FIPS 203 ML-KEM implementation)
+# The library structure changed in version 1.0.0+
+_KYBER_IMPL = None
+
 try:
-    from kyber_py.kyber768 import Kyber768
-except ImportError as e:
-    raise ImportError(
-        "CRITICAL SECURITY ERROR: kyber-py library is REQUIRED for ML-KEM-768 implementation.\n"
-        "This application CANNOT run securely without this dependency.\n"
-        "Install with: pip install kyber-py>=0.1.0\n"
-        "No fallback implementation exists - this is intentional for security."
-    ) from e
+    # New API (kyber-py >= 1.0.0) - FIPS 203 ML-KEM
+    from kyber_py.ml_kem import ML_KEM_768
+
+    _KYBER_IMPL = ML_KEM_768
+    logger.info("Using kyber-py ML-KEM-768 (FIPS 203) implementation")
+except ImportError:
+    try:
+        # Legacy API (kyber-py < 1.0.0)
+        from kyber_py.kyber768 import Kyber768
+
+        _KYBER_IMPL = Kyber768
+        logger.info("Using kyber-py Kyber768 (legacy) implementation")
+    except ImportError as e:
+        raise ImportError(
+            "CRITICAL SECURITY ERROR: kyber-py library is REQUIRED for ML-KEM-768 implementation.\n"
+            "This application CANNOT run securely without this dependency.\n"
+            "Install with: pip install kyber-py>=0.1.0\n"
+            "No fallback implementation exists - this is intentional for security."
+        ) from e
+
 
 class KyberWrapper:
-    @staticmethod
-    def generate_keypair():
-        return Kyber768.keygen()
+    """Wrapper to provide a consistent API across different kyber-py versions."""
 
     @staticmethod
-    def encapsulate(pk):
-        return Kyber768.encaps(pk)
+    def generate_keypair() -> tuple[bytes, bytes]:
+        """Generate a new ML-KEM-768 key pair.
+
+        Returns:
+            Tuple of (public_key, private_key) as bytes
+        """
+        return _KYBER_IMPL.keygen()
 
     @staticmethod
-    def decapsulate(c, sk):
-        return Kyber768.decaps(c, sk)
+    def encapsulate(pk: bytes) -> tuple[bytes, bytes]:
+        """Encapsulate a shared secret for the given public key.
+
+        Args:
+            pk: The recipient's public key
+
+        Returns:
+            Tuple of (ciphertext, shared_secret)
+        """
+        # New API returns (shared_secret, ciphertext), legacy returns same
+        result = _KYBER_IMPL.encaps(pk)
+        # Both old and new API: (shared_key, ciphertext)
+        shared_key, ciphertext = result
+        return ciphertext, shared_key
+
+    @staticmethod
+    def decapsulate(c: bytes, sk: bytes) -> bytes:
+        """Decapsulate a shared secret from ciphertext using private key.
+
+        Args:
+            c: The ciphertext from encapsulation
+            sk: The private key
+
+        Returns:
+            The shared secret as bytes
+        """
+        return _KYBER_IMPL.decaps(sk, c)
+
 
 KyberImpl = KyberWrapper
-logger.info("Using kyber-py ML-KEM-768 implementation")
 
 
 class MLKEMKeyExchange:

@@ -6,7 +6,6 @@ censorship patterns based on research and observed behaviors.
 """
 
 import time
-from typing import Tuple
 
 import numpy as np
 
@@ -20,9 +19,7 @@ class RealTrainingDataProvider:
         """Initialize the data provider with a random seed for reproducibility."""
         np.random.seed(random_seed)
 
-    def generate_dataset(
-        self, num_samples: int = 10000
-    ) -> Tuple[list[list[float]], list[int]]:
+    def generate_dataset(self, num_samples: int = 10000) -> tuple[list[list[float]], list[int]]:
         """
         Generate a complete dataset with realistic censorship patterns.
 

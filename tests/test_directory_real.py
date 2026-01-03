@@ -131,7 +131,7 @@ async def test_directory_flow():
         print("PASS: Directory list response received")
         # Parse response
         parts = mock_writer.data.split(b"DIR_LIST:", 1)
-        response_len_bytes = parts[0][-4:]  # It sends length first in _send_data?
+        parts[0][-4:]  # It sends length first in _send_data?
         # Actually _send_data prepends length(4) then data.
         # So mock_writer.data = LEN(4) + b"DIR_LIST:" + JSON
 

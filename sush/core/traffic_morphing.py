@@ -40,11 +40,11 @@ class TrafficMorphingEngine:
         }
         self.active_profile = "web_browsing"
         self.packet_buffer = []
-        
+
         # Adaptive padding configuration
         self.adaptive_padding_enabled = True
         self.active_padding_profile = PaddingProfile.INTERACTIVE
-        
+
         # Packet history for heuristic detection
         self.packet_history: list[tuple[float, int]] = []  # (timestamp, size)
         self.history_window = 5.0  # seconds
@@ -55,23 +55,23 @@ class TrafficMorphingEngine:
     ) -> list[bytes]:
         """
         Transform packet to match traffic profile.
-        
+
         Args:
             data: Original packet data
             traffic_type: Optional hint for padding profile. If None, uses heuristic detection.
-        
+
         Returns:
             List of morphed packets
         """
         # Update packet history for heuristic detection
         self._update_packet_history(len(data))
-        
+
         # Determine padding profile
         if traffic_type is None and self.adaptive_padding_enabled:
             traffic_type = self._detect_traffic_type()
         elif traffic_type is None:
             traffic_type = self.active_padding_profile
-        
+
         # Apply adaptive padding if enabled
         if self.adaptive_padding_enabled:
             padded_data = self._apply_adaptive_padding(data, traffic_type)
@@ -91,19 +91,17 @@ class TrafficMorphingEngine:
                     padded_data = self._pad_to_size(data, profile.min_size)
                 else:
                     padded_data = data
-        
+
         return [padded_data]
-    
-    def obfuscate_data(
-        self, data: bytes, traffic_type: Optional[PaddingProfile] = None
-    ) -> bytes:
+
+    def obfuscate_data(self, data: bytes, traffic_type: Optional[PaddingProfile] = None) -> bytes:
         """
         Obfuscate data with adaptive padding (alias for morph_packet returning single packet).
-        
+
         Args:
             data: Original data
             traffic_type: Optional hint for padding profile
-        
+
         Returns:
             Obfuscated data with padding
         """
@@ -113,11 +111,11 @@ class TrafficMorphingEngine:
     def _apply_adaptive_padding(self, data: bytes, profile: PaddingProfile) -> bytes:
         """
         Apply adaptive padding based on profile.
-        
+
         Args:
             data: Original data
             profile: Padding profile to use
-        
+
         Returns:
             Padded data with framing header
         """
@@ -139,33 +137,34 @@ class TrafficMorphingEngine:
         else:
             # Default: minimal padding
             target_size = len(data) + 8
-        
+
         return self._pad_to_size(data, target_size)
-    
+
     def _detect_traffic_type(self) -> PaddingProfile:
         """
         Heuristically detect traffic type based on packet history.
-        
+
         Returns:
             Detected PaddingProfile
         """
         if not self.packet_history:
             return PaddingProfile.INTERACTIVE  # Default
-        
+
         # Clean old history
         current_time = time.time()
         self.packet_history = [
-            (ts, size) for ts, size in self.packet_history
+            (ts, size)
+            for ts, size in self.packet_history
             if current_time - ts < self.history_window
         ]
-        
+
         if len(self.packet_history) < 3:
             return PaddingProfile.INTERACTIVE  # Not enough data
-        
+
         # Analyze packet characteristics
         sizes = [size for _, size in self.packet_history]
         avg_size = sum(sizes) / len(sizes)
-        
+
         # Calculate packet frequency (packets per second)
         if len(self.packet_history) >= 2:
             time_span = self.packet_history[-1][0] - self.packet_history[0][0]
@@ -175,7 +174,7 @@ class TrafficMorphingEngine:
                 packet_rate = 0
         else:
             packet_rate = 0
-        
+
         # Heuristic rules
         if avg_size > 1000 and packet_rate > 10:
             # Large packets + high frequency = streaming
@@ -189,24 +188,25 @@ class TrafficMorphingEngine:
         else:
             # Default to interactive for low overhead
             return PaddingProfile.INTERACTIVE
-    
+
     def _update_packet_history(self, packet_size: int):
         """Update packet history for heuristic detection."""
         current_time = time.time()
-        
+
         # Add new packet
         self.packet_history.append((current_time, packet_size))
-        
+
         # Trim old packets
         self.packet_history = [
-            (ts, size) for ts, size in self.packet_history
+            (ts, size)
+            for ts, size in self.packet_history
             if current_time - ts < self.history_window
         ]
-        
+
         # Limit history size
         if len(self.packet_history) > self.history_max_size:
-            self.packet_history = self.packet_history[-self.history_max_size:]
-    
+            self.packet_history = self.packet_history[-self.history_max_size :]
+
     def _pad_to_size(self, data: bytes, target_size: int) -> bytes:
         """Pad packet to target size using standard framing."""
         # Header overhead is 8 bytes
@@ -443,11 +443,11 @@ class TrafficMorphingEngine:
     def set_padding_profile(self, profile: PaddingProfile):
         """Set active adaptive padding profile."""
         self.active_padding_profile = profile
-    
+
     def enable_adaptive_padding(self, enabled: bool = True):
         """Enable or disable adaptive padding."""
         self.adaptive_padding_enabled = enabled
-    
+
     def get_statistics(self) -> dict[str, Any]:
         """Get morphing engine statistics."""
         return {
@@ -456,6 +456,8 @@ class TrafficMorphingEngine:
             "buffer_size": len(self.packet_buffer),
             "profile_info": self.get_profile_info(),
             "adaptive_padding_enabled": self.adaptive_padding_enabled,
-            "active_padding_profile": self.active_padding_profile.value if self.adaptive_padding_enabled else None,
+            "active_padding_profile": self.active_padding_profile.value
+            if self.adaptive_padding_enabled
+            else None,
             "packet_history_size": len(self.packet_history),
         }

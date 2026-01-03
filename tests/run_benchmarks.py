@@ -62,7 +62,7 @@ class BenchmarkRunner:
         iterations = 50
 
         for size in payload_sizes:
-            logger.info(f"\nTesting payload size: {size} bytes ({size/1024:.1f} KB)")
+            logger.info(f"\nTesting payload size: {size} bytes ({size / 1024:.1f} KB)")
 
             # Generate peer keypair for session
             peer_pub, peer_priv = obfuscator.kem.generate_keypair()
@@ -129,8 +129,8 @@ class BenchmarkRunner:
             )
 
             logger.info(
-                f"  Results: Avg Total={avg_total*1000:.2f}ms, "
-                f"Std={std_total*1000:.2f}ms, Throughput={throughput_mbps:.2f} Mbps"
+                f"  Results: Avg Total={avg_total * 1000:.2f}ms, "
+                f"Std={std_total * 1000:.2f}ms, Throughput={throughput_mbps:.2f} Mbps"
             )
 
     async def experiment_b_end_to_end_throughput(self):
@@ -241,6 +241,7 @@ class BenchmarkRunner:
                 except Exception as e:
                     logger.error(f"Error during transfer: {e}")
                     import traceback
+
                     logger.error(traceback.format_exc())
 
                 elapsed_time = time.perf_counter() - start_time
@@ -265,7 +266,7 @@ class BenchmarkRunner:
                 )
 
                 logger.info(
-                    f"  {mode_name}: Sent {total_bytes_sent/1024/1024:.2f} MB in "
+                    f"  {mode_name}: Sent {total_bytes_sent / 1024 / 1024:.2f} MB in "
                     f"{elapsed_time:.2f}s, Throughput: {effective_throughput_mbps:.2f} Mbps"
                 )
 
@@ -353,7 +354,7 @@ class BenchmarkRunner:
             adaptation_detected = False
             adaptation_time = None
 
-            for i, metrics in enumerate(attack_metrics):
+            for _i, metrics in enumerate(attack_metrics):
                 await detector.record_metrics(metrics)
                 await asyncio.sleep(0.1)  # Faster injection
 
@@ -366,7 +367,7 @@ class BenchmarkRunner:
                     adaptation_detected = True
                     logger.info(
                         f"  ✓ Adaptation detected! State changed from {initial_state} to {current_state} "
-                        f"after {adaptation_time*1000:.2f}ms"
+                        f"after {adaptation_time * 1000:.2f}ms"
                     )
                     break  # Stop checking once adaptation is detected
 
@@ -449,7 +450,7 @@ class BenchmarkRunner:
                 overhead_percent_list.append(overhead_percent)
 
                 if (i + 1) % 20 == 0:
-                    logger.info(f"  Processed {i+1}/{num_packets} packets")
+                    logger.info(f"  Processed {i + 1}/{num_packets} packets")
 
             # Calculate statistics
             avg_overhead_bytes = np.mean(overhead_bytes_list)
@@ -461,8 +462,12 @@ class BenchmarkRunner:
             logger.info(f"\n  Results for {strategy_name}:")
             logger.info(f"    Original bytes: {total_original_bytes:,}")
             logger.info(f"    Padded bytes: {total_padded_bytes:,}")
-            logger.info(f"    Total overhead: {total_overhead_bytes:,} bytes ({total_overhead_percent:.2f}%)")
-            logger.info(f"    Avg overhead per packet: {avg_overhead_bytes:.2f} bytes ({avg_overhead_percent:.2f}%)")
+            logger.info(
+                f"    Total overhead: {total_overhead_bytes:,} bytes ({total_overhead_percent:.2f}%)"
+            )
+            logger.info(
+                f"    Avg overhead per packet: {avg_overhead_bytes:.2f} bytes ({avg_overhead_percent:.2f}%)"
+            )
             logger.info(f"    Std dev: {std_overhead_percent:.2f}%")
 
             # Save result
@@ -535,7 +540,7 @@ class BenchmarkRunner:
                 overhead_percent_list.append(overhead_percent)
 
                 if (i + 1) % 20 == 0:
-                    logger.info(f"  Processed {i+1}/{num_packets} packets")
+                    logger.info(f"  Processed {i + 1}/{num_packets} packets")
 
             # Calculate statistics
             avg_overhead_bytes = np.mean(overhead_bytes_list)
@@ -547,8 +552,12 @@ class BenchmarkRunner:
             logger.info(f"\n  Results for {strategy_name}:")
             logger.info(f"    Original bytes: {total_original_bytes:,}")
             logger.info(f"    Padded bytes: {total_padded_bytes:,}")
-            logger.info(f"    Total overhead: {total_overhead_bytes:,} bytes ({total_overhead_percent:.2f}%)")
-            logger.info(f"    Avg overhead per packet: {avg_overhead_bytes:.2f} bytes ({avg_overhead_percent:.2f}%)")
+            logger.info(
+                f"    Total overhead: {total_overhead_bytes:,} bytes ({total_overhead_percent:.2f}%)"
+            )
+            logger.info(
+                f"    Avg overhead per packet: {avg_overhead_bytes:.2f} bytes ({avg_overhead_percent:.2f}%)"
+            )
             logger.info(f"    Std dev: {std_overhead_percent:.2f}%")
 
             # Save result
@@ -591,9 +600,9 @@ class BenchmarkRunner:
             writer.writeheader()
             writer.writerows(self.results)
 
-        logger.info(f"\n{'='*60}")
+        logger.info(f"\n{'=' * 60}")
         logger.info(f"Saved {len(self.results)} results to {CSV_FILE}")
-        logger.info(f"{'='*60}")
+        logger.info(f"{'=' * 60}")
 
 
 async def main():
@@ -629,4 +638,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
