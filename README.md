@@ -67,15 +67,19 @@ python sush_cli.py connect example.org 443 --data "ping"
 import asyncio
 from sush.client import SushClient, ClientConfig
 
+
 async def main():
     config = ClientConfig(log_level="INFO")
     client = SushClient(config)
     await client.start()
 
     status = client.get_status()
-    print("Node ID:", status["node_id"], "Threat:", status["security_status"]["current_threat_level"])
+    print(
+        "Node ID:", status["node_id"], "Threat:", status["security_status"]["current_threat_level"]
+    )
 
     await client.stop()
+
 
 asyncio.run(main())
 ```

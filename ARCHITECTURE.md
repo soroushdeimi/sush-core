@@ -61,7 +61,7 @@ Picks the best encryption based on current conditions.
 if high_threat_level:
     use_chacha20()  # More secure
 elif intel_cpu_with_aes_ni:
-    use_aes_gcm()   # Fastest
+    use_aes_gcm()  # Fastest
 else:
     use_chacha20()  # Best compatibility
 ```
